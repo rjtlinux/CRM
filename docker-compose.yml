@@ -56,7 +56,7 @@ services:
       dockerfile: Dockerfile
     container_name: crm_frontend
     environment:
-      VITE_API_URL: http://localhost:5000/api
+      VITE_API_URL: http://3.110.176.76:5000/api
     ports:
       - "5173:5173"
     depends_on:
