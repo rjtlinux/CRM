@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, salesAPI, costsAPI, customersAPI } from '../services/api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
@@ -8,6 +8,12 @@ const Dashboard = () => {
   const [revenueData, setRevenueData] = useState(null);
   const [period, setPeriod] = useState('monthly');
   const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [showModal, setShowModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalData, setModalData] = useState([]);
+  const [modalType, setModalType] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
@@ -34,7 +40,66 @@ const Dashboard = () => {
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-  if (loading) {
+  const handleTileClick = async (type) => {
+    try {
+      setLoading(true);
+      let data = [];
+      let title = '';
+
+      switch (type) {
+        case 'revenue':
+          const salesRes = await salesAPI.getAll();
+          data = salesRes.data.sales.filter(s => s.status === 'completed');
+          title = 'Completed Sales - Revenue Details';
+          setModalType('sales');
+          break;
+        
+        case 'costs':
+          const costsRes = await costsAPI.getAll();
+          data = costsRes.data.costs;
+          title = 'All Costs & Expenses';
+          setModalType('costs');
+          break;
+        
+        case 'profit':
+          const [salesRes2, costsRes2] = await Promise.all([
+            salesAPI.getAll(),
+            costsAPI.getAll()
+          ]);
+          data = {
+            sales: salesRes2.data.sales.filter(s => s.status === 'completed'),
+            costs: costsRes2.data.costs
+          };
+          title = 'Net Profit Breakdown';
+          setModalType('profit');
+          break;
+        
+        case 'customers':
+          const customersRes = await customersAPI.getAll();
+          data = customersRes.data.customers.filter(c => c.status === 'active');
+          title = 'Active Customers';
+          setModalType('customers');
+          break;
+      }
+
+      setModalData(data);
+      setModalTitle(title);
+      setShowModal(true);
+    } catch (error) {
+      console.error('Error fetching details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setModalData([]);
+    setModalTitle('');
+    setModalType('');
+  };
+
+  if (loading && !stats) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-xl">Loading dashboard...</div>
@@ -57,27 +122,38 @@ const Dashboard = () => {
         </select>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Clickable */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+        <div 
+          onClick={() => handleTileClick('revenue')}
+          className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+        >
           <div className="text-sm opacity-90">Total Revenue</div>
           <div className="text-3xl font-bold mt-2">
             ${stats?.total_revenue?.toLocaleString() || 0}
           </div>
           <div className="text-sm mt-2 opacity-90">
-            {stats?.recent_sales?.length || 0} completed sales
+            {stats?.recent_sales?.filter(s => s.status === 'completed').length || 0} completed sales
           </div>
+          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
         </div>
 
-        <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
+        <div 
+          onClick={() => handleTileClick('costs')}
+          className="card bg-gradient-to-br from-red-500 to-red-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+        >
           <div className="text-sm opacity-90">Total Costs</div>
           <div className="text-3xl font-bold mt-2">
             ${stats?.total_costs?.toLocaleString() || 0}
           </div>
           <div className="text-sm mt-2 opacity-90">Operating expenses</div>
+          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
         </div>
 
-        <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+        <div 
+          onClick={() => handleTileClick('profit')}
+          className="card bg-gradient-to-br from-green-500 to-green-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+        >
           <div className="text-sm opacity-90">Net Profit</div>
           <div className="text-3xl font-bold mt-2">
             ${stats?.net_profit?.toLocaleString() || 0}
@@ -85,9 +161,13 @@ const Dashboard = () => {
           <div className="text-sm mt-2 opacity-90">
             {stats?.net_profit > 0 ? 'Positive margin' : 'Needs attention'}
           </div>
+          <div className="text-xs mt-2 opacity-75">Click to view breakdown →</div>
         </div>
 
-        <div className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+        <div 
+          onClick={() => handleTileClick('customers')}
+          className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+        >
           <div className="text-sm opacity-90">Active Customers</div>
           <div className="text-3xl font-bold mt-2">
             {stats?.total_customers || 0}
@@ -95,6 +175,7 @@ const Dashboard = () => {
           <div className="text-sm mt-2 opacity-90">
             {stats?.total_proposals || 0} active proposals
           </div>
+          <div className="text-xs mt-2 opacity-75">Click to view list →</div>
         </div>
       </div>
 
@@ -183,6 +264,244 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Details Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+              <h2 className="text-2xl font-bold text-gray-800">{modalTitle}</h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {modalType === 'sales' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left py-3 px-4">Invoice #</th>
+                        <th className="text-left py-3 px-4">Customer</th>
+                        <th className="text-left py-3 px-4">Date</th>
+                        <th className="text-left py-3 px-4">Amount</th>
+                        <th className="text-left py-3 px-4">Payment Method</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalData.map((sale) => (
+                        <tr key={sale.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{sale.invoice_number || '-'}</td>
+                          <td className="py-3 px-4">{sale.customer_name}</td>
+                          <td className="py-3 px-4">{new Date(sale.sale_date).toLocaleDateString()}</td>
+                          <td className="py-3 px-4 font-bold text-green-600">
+                            ${parseFloat(sale.amount).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4">{sale.payment_method || '-'}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                              {sale.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-100 font-bold">
+                        <td colSpan="3" className="py-3 px-4 text-right">Total Revenue:</td>
+                        <td className="py-3 px-4 text-green-600 text-xl">
+                          ${modalData.reduce((sum, s) => sum + parseFloat(s.amount), 0).toLocaleString()}
+                        </td>
+                        <td colSpan="2"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+
+              {modalType === 'costs' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left py-3 px-4">Date</th>
+                        <th className="text-left py-3 px-4">Category</th>
+                        <th className="text-left py-3 px-4">Description</th>
+                        <th className="text-left py-3 px-4">Vendor</th>
+                        <th className="text-left py-3 px-4">Amount</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalData.map((cost) => (
+                        <tr key={cost.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">{new Date(cost.cost_date).toLocaleDateString()}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-gray-100 rounded text-sm">
+                              {cost.category}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">{cost.description}</td>
+                          <td className="py-3 px-4">{cost.vendor || '-'}</td>
+                          <td className="py-3 px-4 font-bold text-red-600">
+                            ${parseFloat(cost.amount).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              cost.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {cost.payment_status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-100 font-bold">
+                        <td colSpan="4" className="py-3 px-4 text-right">Total Costs:</td>
+                        <td className="py-3 px-4 text-red-600 text-xl">
+                          ${modalData.reduce((sum, c) => sum + parseFloat(c.amount), 0).toLocaleString()}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+
+              {modalType === 'profit' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="card bg-green-50">
+                      <div className="text-sm text-gray-600">Total Revenue</div>
+                      <div className="text-3xl font-bold text-green-600">
+                        ${modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0).toLocaleString()}
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        From {modalData.sales.length} completed sales
+                      </div>
+                    </div>
+                    <div className="card bg-red-50">
+                      <div className="text-sm text-gray-600">Total Costs</div>
+                      <div className="text-3xl font-bold text-red-600">
+                        ${modalData.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0).toLocaleString()}
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        From {modalData.costs.length} expenses
+                      </div>
+                    </div>
+                    <div className="card bg-blue-50">
+                      <div className="text-sm text-gray-600">Net Profit</div>
+                      <div className="text-3xl font-bold text-blue-600">
+                        ${(
+                          modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0) -
+                          modalData.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0)
+                        ).toLocaleString()}
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        {(
+                          (modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0) -
+                          modalData.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0)) /
+                          modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0) * 100
+                        ).toFixed(1)}% margin
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="font-bold text-lg mb-3">Top 5 Sales</h3>
+                      <div className="space-y-2">
+                        {modalData.sales
+                          .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
+                          .slice(0, 5)
+                          .map((sale) => (
+                            <div key={sale.id} className="flex justify-between items-center p-3 bg-green-50 rounded">
+                              <div>
+                                <div className="font-medium">{sale.customer_name}</div>
+                                <div className="text-sm text-gray-600">{sale.description}</div>
+                              </div>
+                              <div className="font-bold text-green-600">
+                                ${parseFloat(sale.amount).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-lg mb-3">Top 5 Costs</h3>
+                      <div className="space-y-2">
+                        {modalData.costs
+                          .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
+                          .slice(0, 5)
+                          .map((cost) => (
+                            <div key={cost.id} className="flex justify-between items-center p-3 bg-red-50 rounded">
+                              <div>
+                                <div className="font-medium">{cost.category}</div>
+                                <div className="text-sm text-gray-600">{cost.description}</div>
+                              </div>
+                              <div className="font-bold text-red-600">
+                                ${parseFloat(cost.amount).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {modalType === 'customers' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left py-3 px-4">Company</th>
+                        <th className="text-left py-3 px-4">Contact Person</th>
+                        <th className="text-left py-3 px-4">Email</th>
+                        <th className="text-left py-3 px-4">Phone</th>
+                        <th className="text-left py-3 px-4">Location</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalData.map((customer) => (
+                        <tr key={customer.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{customer.company_name}</td>
+                          <td className="py-3 px-4">{customer.contact_person}</td>
+                          <td className="py-3 px-4">{customer.email}</td>
+                          <td className="py-3 px-4">{customer.phone}</td>
+                          <td className="py-3 px-4">{customer.city}, {customer.country}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                              {customer.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t bg-gray-50 flex justify-end">
+              <button onClick={closeModal} className="btn-secondary">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
