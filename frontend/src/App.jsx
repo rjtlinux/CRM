@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Opportunities from './pages/Opportunities';
 import Customers from './pages/Customers';
 import Sales from './pages/Sales';
 import Costs from './pages/Costs';
@@ -36,6 +37,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="opportunities" element={<Opportunities />} />
         <Route path="customers" element={<Customers />} />
         <Route path="sales" element={<Sales />} />
         <Route path="costs" element={<Costs />} />

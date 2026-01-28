@@ -12,6 +12,7 @@ const Layout = () => {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: '📊' },
+    { path: '/opportunities', label: 'Opportunities', icon: '💼' },
     { path: '/customers', label: 'Customers', icon: '👥' },
     { path: '/sales', label: 'Sales', icon: '💰' },
     { path: '/costs', label: 'Costs', icon: '💳' },

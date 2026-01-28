@@ -86,4 +86,15 @@ export const dashboardAPI = {
   getRevenue: () => api.get('/dashboard/revenue'),
 };
 
+// Opportunities API
+export const opportunitiesAPI = {
+  getAll: () => api.get('/opportunities'),
+  getById: (id) => api.get(`/opportunities/${id}`),
+  create: (data) => api.post('/opportunities', data),
+  update: (id, data) => api.put(`/opportunities/${id}`, data),
+  delete: (id) => api.delete(`/opportunities/${id}`),
+  getPipelineMetrics: () => api.get('/opportunities/pipeline-metrics'),
+  getRevenueForecast: () => api.get('/opportunities/revenue-forecast'),
+};
+
 export default api;
