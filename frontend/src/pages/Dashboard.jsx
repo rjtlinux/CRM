@@ -103,6 +103,31 @@ const Dashboard = () => {
           title = 'Active Customers';
           setModalType('customers');
           break;
+        
+        case 'total_leads':
+          const allLeadsRes = await leadsAPI.getAll();
+          data = allLeadsRes.data.leads;
+          title = 'All Leads';
+          setModalType('leads');
+          break;
+        
+        case 'active_leads':
+          const activeLeadsRes = await leadsAPI.getAll();
+          data = activeLeadsRes.data.leads.filter(l => 
+            l.status === 'active' || l.status === 'contacted' || l.status === 'qualified'
+          );
+          title = 'Active Leads';
+          setModalType('leads');
+          break;
+        
+        case 'high_value_deals':
+          const oppsRes = await opportunitiesAPI.getAll();
+          data = oppsRes.data.opportunities
+            .filter(opp => parseFloat(opp.value) >= 30000 && opp.pipeline_stage !== 'closed_lost')
+            .sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
+          title = 'High Value Deals (Over $30,000)';
+          setModalType('opportunities');
+          break;
       }
 
       setModalData(data);
@@ -202,9 +227,12 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* New Metrics Row */}
+      {/* New Metrics Row - Clickable */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card bg-gradient-to-br from-cyan-500 to-cyan-600 text-white">
+        <div 
+          onClick={() => handleTileClick('total_leads')}
+          className="card bg-gradient-to-br from-cyan-500 to-cyan-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+        >
           <div className="text-sm opacity-90">Total Leads</div>
           <div className="text-3xl font-bold mt-2">
             {leadsData.total}
@@ -212,9 +240,13 @@ const Dashboard = () => {
           <div className="text-sm mt-2 opacity-90">
             All leads in system
           </div>
+          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
         </div>
 
-        <div className="card bg-gradient-to-br from-teal-500 to-teal-600 text-white">
+        <div 
+          onClick={() => handleTileClick('active_leads')}
+          className="card bg-gradient-to-br from-teal-500 to-teal-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+        >
           <div className="text-sm opacity-90">Active Leads</div>
           <div className="text-3xl font-bold mt-2">
             {leadsData.active}
@@ -222,9 +254,13 @@ const Dashboard = () => {
           <div className="text-sm mt-2 opacity-90">
             Currently being pursued
           </div>
+          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
         </div>
 
-        <div className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+        <div 
+          onClick={() => handleTileClick('high_value_deals')}
+          className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+        >
           <div className="text-sm opacity-90">High Value Deals</div>
           <div className="text-3xl font-bold mt-2">
             {highValueDeals.length}
@@ -232,6 +268,7 @@ const Dashboard = () => {
           <div className="text-sm mt-2 opacity-90">
             Deals over $30,000
           </div>
+          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
         </div>
       </div>
 
@@ -631,6 +668,148 @@ const Dashboard = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {modalType === 'leads' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left py-3 px-4">Name</th>
+                        <th className="text-left py-3 px-4">Company</th>
+                        <th className="text-left py-3 px-4">Email</th>
+                        <th className="text-left py-3 px-4">Phone</th>
+                        <th className="text-left py-3 px-4">Source</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">Assigned To</th>
+                        <th className="text-left py-3 px-4">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalData.map((lead) => (
+                        <tr key={lead.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{lead.name}</td>
+                          <td className="py-3 px-4">{lead.company || '-'}</td>
+                          <td className="py-3 px-4">{lead.email}</td>
+                          <td className="py-3 px-4">{lead.phone || '-'}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 capitalize">
+                              {lead.source}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
+                              lead.status === 'contacted' ? 'bg-blue-100 text-blue-800' :
+                              lead.status === 'active' ? 'bg-yellow-100 text-yellow-800' :
+                              lead.status === 'converted' ? 'bg-purple-100 text-purple-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {lead.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">{lead.assigned_to_name || '-'}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {new Date(lead.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {modalData.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No leads found
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {modalType === 'opportunities' && (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left py-3 px-4">Title</th>
+                        <th className="text-left py-3 px-4">Customer</th>
+                        <th className="text-left py-3 px-4">Value</th>
+                        <th className="text-left py-3 px-4">Stage</th>
+                        <th className="text-left py-3 px-4">Probability</th>
+                        <th className="text-left py-3 px-4">Weighted Value</th>
+                        <th className="text-left py-3 px-4">Close Date</th>
+                        <th className="text-left py-3 px-4">Assigned To</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalData.map((opp) => (
+                        <tr key={opp.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{opp.title}</td>
+                          <td className="py-3 px-4">{opp.customer_name}</td>
+                          <td className="py-3 px-4">
+                            <span className="font-bold text-green-600">
+                              ${parseFloat(opp.value).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              opp.pipeline_stage === 'negotiation' ? 'bg-orange-100 text-orange-800' :
+                              opp.pipeline_stage === 'proposal' ? 'bg-yellow-100 text-yellow-800' :
+                              opp.pipeline_stage === 'qualified' ? 'bg-blue-100 text-blue-800' :
+                              opp.pipeline_stage === 'closed_won' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {opp.pipeline_stage.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-green-500 h-2 rounded-full"
+                                  style={{ width: `${opp.closing_probability}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm">{opp.closing_probability}%</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-bold text-blue-600">
+                              ${(parseFloat(opp.value) * (opp.closing_probability / 100)).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm">
+                            {opp.expected_close_date 
+                              ? new Date(opp.expected_close_date).toLocaleDateString()
+                              : '-'}
+                          </td>
+                          <td className="py-3 px-4">{opp.assigned_to_name || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-100 font-bold">
+                        <td colSpan="2" className="py-3 px-4 text-right">Totals:</td>
+                        <td className="py-3 px-4 text-green-600">
+                          ${modalData.reduce((sum, o) => sum + parseFloat(o.value), 0).toLocaleString()}
+                        </td>
+                        <td></td>
+                        <td className="py-3 px-4">
+                          Avg: {modalData.length > 0 
+                            ? Math.round(modalData.reduce((sum, o) => sum + o.closing_probability, 0) / modalData.length)
+                            : 0}%
+                        </td>
+                        <td className="py-3 px-4 text-blue-600">
+                          ${modalData.reduce((sum, o) => sum + (parseFloat(o.value) * (o.closing_probability / 100)), 0).toLocaleString()}
+                        </td>
+                        <td colSpan="2"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {modalData.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No high-value deals found
+                    </div>
+                  )}
                 </div>
               )}
             </div>
