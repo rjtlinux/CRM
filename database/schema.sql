@@ -132,7 +132,7 @@ CREATE TRIGGER update_proposals_updated_at BEFORE UPDATE ON proposals
 -- Insert default admin user (password: admin123)
 -- Note: This is a bcrypt hash of 'admin123'
 INSERT INTO users (email, password, full_name, role) VALUES
-('admin@crm.com', '$2a$10$wJWq7Rx4ITz/yMv/6CKQU./kagkh34qo7ZKvuA5YwxaU.JNK/AdQ6', 'Admin User', 'admin');
+('admin@crm.com', '$2a$10$VSKImIlx7L7hjBrzetXIfO9h1wIaj2k7NjcSSG5ysqciCRMhy2da2', 'Admin User', 'admin');
 
 -- Insert sample data for demonstration
 INSERT INTO customers (company_name, contact_person, email, phone, city, country, created_by) VALUES

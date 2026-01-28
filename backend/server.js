@@ -28,6 +28,10 @@ const salesRoutes = require('./routes/salesRoutes');
 const costRoutes = require('./routes/costRoutes');
 const proposalRoutes = require('./routes/proposalRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const opportunityRoutes = require('./routes/opportunityRoutes');
+const leadRoutes = require('./routes/leadRoutes');
+const followupRoutes = require('./routes/followupRoutes');
+const reminderRoutes = require('./routes/reminderRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -36,6 +40,10 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/costs', costRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/opportunities', opportunityRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/followups', followupRoutes);
+app.use('/api/reminders', reminderRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
