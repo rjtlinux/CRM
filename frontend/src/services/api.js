@@ -97,4 +97,15 @@ export const opportunitiesAPI = {
   getRevenueForecast: () => api.get('/opportunities/revenue-forecast'),
 };
 
+// Leads API
+export const leadsAPI = {
+  getAll: () => api.get('/leads'),
+  getById: (id) => api.get(`/leads/${id}`),
+  create: (data) => api.post('/leads', data),
+  update: (id, data) => api.put(`/leads/${id}`, data),
+  delete: (id) => api.delete(`/leads/${id}`),
+  getMetrics: () => api.get('/leads/metrics'),
+  getBySalesperson: (userId) => api.get(`/leads/by-salesperson/${userId}`),
+};
+
 export default api;

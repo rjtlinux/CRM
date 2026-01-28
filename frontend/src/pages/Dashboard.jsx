@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI, salesAPI, costsAPI, customersAPI } from '../services/api';
+import { dashboardAPI, salesAPI, costsAPI, customersAPI, opportunitiesAPI, leadsAPI } from '../services/api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
@@ -8,6 +8,10 @@ const Dashboard = () => {
   const [revenueData, setRevenueData] = useState(null);
   const [period, setPeriod] = useState('monthly');
   const [loading, setLoading] = useState(true);
+  
+  // New state for leads and opportunities
+  const [leadsData, setLeadsData] = useState({ total: 0, active: 0 });
+  const [highValueDeals, setHighValueDeals] = useState([]);
   
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -22,15 +26,34 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, trendRes, revenueRes] = await Promise.all([
+      const [statsRes, trendRes, revenueRes, leadsRes, oppsRes] = await Promise.all([
         dashboardAPI.getStats(),
         dashboardAPI.getSalesTrend(period),
         dashboardAPI.getRevenue(),
+        leadsAPI.getAll().catch(() => ({ data: { leads: [] } })),
+        opportunitiesAPI.getAll().catch(() => ({ data: { opportunities: [] } })),
       ]);
 
       setStats(statsRes.data.stats);
       setSalesTrend(trendRes.data.trend);
       setRevenueData(revenueRes.data);
+      
+      // Process leads data
+      const leads = leadsRes.data.leads || [];
+      const activeLeads = leads.filter(l => l.status === 'active' || l.status === 'contacted' || l.status === 'qualified');
+      setLeadsData({
+        total: leads.length,
+        active: activeLeads.length
+      });
+      
+      // Process high-value deals (opportunities > $30,000)
+      const opportunities = oppsRes.data.opportunities || [];
+      const highValue = opportunities
+        .filter(opp => parseFloat(opp.value) >= 30000 && opp.pipeline_stage !== 'closed_lost')
+        .sort((a, b) => parseFloat(b.value) - parseFloat(a.value))
+        .slice(0, 5); // Top 5
+      setHighValueDeals(highValue);
+      
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -179,6 +202,39 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* New Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card bg-gradient-to-br from-cyan-500 to-cyan-600 text-white">
+          <div className="text-sm opacity-90">Total Leads</div>
+          <div className="text-3xl font-bold mt-2">
+            {leadsData.total}
+          </div>
+          <div className="text-sm mt-2 opacity-90">
+            All leads in system
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-teal-500 to-teal-600 text-white">
+          <div className="text-sm opacity-90">Active Leads</div>
+          <div className="text-3xl font-bold mt-2">
+            {leadsData.active}
+          </div>
+          <div className="text-sm mt-2 opacity-90">
+            Currently being pursued
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+          <div className="text-sm opacity-90">High Value Deals</div>
+          <div className="text-3xl font-bold mt-2">
+            {highValueDeals.length}
+          </div>
+          <div className="text-sm mt-2 opacity-90">
+            Deals over $30,000
+          </div>
+        </div>
+      </div>
+
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales Trend Chart */}
@@ -264,6 +320,92 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* High Value Deals Section */}
+      {highValueDeals.length > 0 && (
+        <div className="card">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">🎯 High Value Deals</h2>
+            <span className="text-sm text-gray-500">Deals over $30,000</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4">Deal Title</th>
+                  <th className="text-left py-3 px-4">Customer</th>
+                  <th className="text-left py-3 px-4">Value</th>
+                  <th className="text-left py-3 px-4">Stage</th>
+                  <th className="text-left py-3 px-4">Probability</th>
+                  <th className="text-left py-3 px-4">Expected Close</th>
+                  <th className="text-left py-3 px-4">Assigned To</th>
+                </tr>
+              </thead>
+              <tbody>
+                {highValueDeals.map((deal) => (
+                  <tr key={deal.id} className="border-b hover:bg-gray-50">
+                    <td className="py-3 px-4 font-medium">{deal.title}</td>
+                    <td className="py-3 px-4">{deal.customer_name}</td>
+                    <td className="py-3 px-4">
+                      <span className="font-bold text-green-600 text-lg">
+                        ${parseFloat(deal.value).toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        deal.pipeline_stage === 'negotiation' ? 'bg-orange-100 text-orange-800' :
+                        deal.pipeline_stage === 'proposal' ? 'bg-yellow-100 text-yellow-800' :
+                        deal.pipeline_stage === 'qualified' ? 'bg-blue-100 text-blue-800' :
+                        deal.pipeline_stage === 'closed_won' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {deal.pipeline_stage.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-green-500 h-2 rounded-full"
+                            style={{ width: `${deal.closing_probability}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium">{deal.closing_probability}%</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {deal.expected_close_date 
+                        ? new Date(deal.expected_close_date).toLocaleDateString()
+                        : '-'}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {deal.assigned_to_name || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Total Weighted Value */}
+          <div className="mt-4 pt-4 border-t flex justify-between items-center">
+            <div className="text-gray-600">
+              <span className="font-medium">Total Potential Revenue:</span>
+              <span className="ml-2 text-2xl font-bold text-green-600">
+                ${highValueDeals.reduce((sum, deal) => sum + parseFloat(deal.value), 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="text-gray-600">
+              <span className="font-medium">Weighted Value:</span>
+              <span className="ml-2 text-2xl font-bold text-blue-600">
+                ${highValueDeals.reduce((sum, deal) => 
+                  sum + (parseFloat(deal.value) * (deal.closing_probability / 100)), 0
+                ).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Details Modal */}
       {showModal && (
