@@ -14,8 +14,27 @@ const Customers = () => {
     address: '',
     city: '',
     country: '',
+    sector: 'Other',
     status: 'active',
   });
+
+  const sectors = [
+    'Manufacturing',
+    'Finance',
+    'IT',
+    'Sales',
+    'Supply Chain',
+    'Law Firm',
+    'Healthcare',
+    'Education',
+    'Retail',
+    'Technology',
+    'Construction',
+    'Real Estate',
+    'Hospitality',
+    'Transportation',
+    'Other'
+  ];
 
   useEffect(() => {
     fetchCustomers();
@@ -45,7 +64,8 @@ const Customers = () => {
       closeModal();
     } catch (error) {
       console.error('Error saving customer:', error);
-      alert('Failed to save customer');
+      const errorMessage = error.response?.data?.error || 'Failed to save customer';
+      alert(errorMessage);
     }
   };
 
@@ -75,6 +95,7 @@ const Customers = () => {
         address: '',
         city: '',
         country: '',
+        sector: 'Other',
         status: 'active',
       });
     }
@@ -116,6 +137,7 @@ const Customers = () => {
                 <th className="text-left py-3 px-4">Email</th>
                 <th className="text-left py-3 px-4">Phone</th>
                 <th className="text-left py-3 px-4">Location</th>
+                <th className="text-left py-3 px-4">Sector</th>
                 <th className="text-left py-3 px-4">Status</th>
                 <th className="text-left py-3 px-4">Actions</th>
               </tr>
@@ -128,6 +150,11 @@ const Customers = () => {
                   <td className="py-3 px-4">{customer.email}</td>
                   <td className="py-3 px-4">{customer.phone}</td>
                   <td className="py-3 px-4">{customer.city}, {customer.country}</td>
+                  <td className="py-3 px-4">
+                    <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                      {customer.sector || 'Other'}
+                    </span>
+                  </td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
@@ -180,7 +207,7 @@ const Customers = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contact Person
+                    Contact Person *
                   </label>
                   <input
                     type="text"
@@ -188,6 +215,7 @@ const Customers = () => {
                     value={formData.contact_person}
                     onChange={handleChange}
                     className="input-field"
+                    required
                   />
                 </div>
               </div>
@@ -195,7 +223,7 @@ const Customers = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
+                    Email *
                   </label>
                   <input
                     type="email"
@@ -203,11 +231,12 @@ const Customers = () => {
                     value={formData.email}
                     onChange={handleChange}
                     className="input-field"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone
+                    Phone *
                   </label>
                   <input
                     type="tel"
@@ -215,13 +244,14 @@ const Customers = () => {
                     value={formData.phone}
                     onChange={handleChange}
                     className="input-field"
+                    required
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address
+                  Address *
                 </label>
                 <input
                   type="text"
@@ -229,13 +259,14 @@ const Customers = () => {
                   value={formData.address}
                   onChange={handleChange}
                   className="input-field"
+                  required
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City
+                    City *
                   </label>
                   <input
                     type="text"
@@ -243,11 +274,12 @@ const Customers = () => {
                     value={formData.city}
                     onChange={handleChange}
                     className="input-field"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Country
+                    Country *
                   </label>
                   <input
                     type="text"
@@ -255,22 +287,41 @@ const Customers = () => {
                     value={formData.country}
                     onChange={handleChange}
                     className="input-field"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
+                    Sector *
                   </label>
                   <select
-                    name="status"
-                    value={formData.status}
+                    name="sector"
+                    value={formData.sector}
                     onChange={handleChange}
                     className="input-field"
+                    required
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    {sectors.map((sector) => (
+                      <option key={sector} value={sector}>{sector}</option>
+                    ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="input-field"
+                  required
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">

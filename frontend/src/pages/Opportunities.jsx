@@ -12,6 +12,39 @@ const Opportunities = () => {
   const [viewMode, setViewMode] = useState('pipeline'); // 'pipeline' or 'list'
   const [selectedStage, setSelectedStage] = useState('all');
   
+  // Customer search and inline creation
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    company_name: '',
+    contact_person: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    country: '',
+    sector: 'Other',
+    status: 'active',
+  });
+
+  const sectors = [
+    'Manufacturing',
+    'Finance',
+    'IT',
+    'Sales',
+    'Supply Chain',
+    'Law Firm',
+    'Healthcare',
+    'Education',
+    'Retail',
+    'Technology',
+    'Construction',
+    'Real Estate',
+    'Hospitality',
+    'Transportation',
+    'Other'
+  ];
+  
   const [formData, setFormData] = useState({
     customer_id: '',
     title: '',
@@ -123,6 +156,58 @@ const Opportunities = () => {
       [e.target.name]: e.target.value,
     });
   };
+
+  const handleNewCustomerChange = (e) => {
+    setNewCustomerData({
+      ...newCustomerData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleCreateNewCustomer = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await customersAPI.create(newCustomerData);
+      const newCustomer = response.data.customer;
+      
+      // Add to customers list
+      setCustomers([...customers, newCustomer]);
+      
+      // Set as selected customer in opportunity form
+      setFormData({
+        ...formData,
+        customer_id: newCustomer.id
+      });
+      
+      // Close customer modal
+      setShowCustomerModal(false);
+      
+      // Reset customer form
+      setNewCustomerData({
+        company_name: '',
+        contact_person: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        country: '',
+        sector: 'Other',
+        status: 'active',
+      });
+      
+      alert('Customer created successfully!');
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to create customer';
+      alert(errorMessage);
+    }
+  };
+
+  // Filter customers based on search
+  const filteredCustomers = customers.filter(c => 
+    c.company_name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    (c.contact_person && c.contact_person.toLowerCase().includes(customerSearch.toLowerCase()))
+  );
 
   const getOpportunitiesByStage = (stage) => {
     return opportunities.filter(opp => opp.pipeline_stage === stage);
@@ -351,25 +436,47 @@ const Opportunities = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Customer *
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Customer *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerModal(true)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      + Create New Customer
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search customer..."
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    className="input-field mb-2"
+                  />
                   <select
                     name="customer_id"
                     value={formData.customer_id}
                     onChange={handleChange}
                     className="input-field"
+                    size="5"
                     required
                   >
                     <option value="">Select Customer</option>
-                    {customers.map((customer) => (
+                    {filteredCustomers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.company_name}
+                        {customer.company_name} {customer.contact_person ? `(${customer.contact_person})` : ''}
                       </option>
                     ))}
                   </select>
+                  {filteredCustomers.length === 0 && customerSearch && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      No customers found. Click "Create New Customer" above.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -514,6 +621,149 @@ const Opportunities = () => {
                 </button>
                 <button type="submit" className="btn-primary">
                   {editingOpportunity ? 'Update' : 'Create'} Opportunity
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create New Customer Modal */}
+      {showCustomerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b">
+              <h2 className="text-2xl font-bold">Create New Customer</h2>
+            </div>
+            
+            <form onSubmit={handleCreateNewCustomer} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="company_name"
+                    value={newCustomerData.company_name}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contact Person *
+                  </label>
+                  <input
+                    type="text"
+                    name="contact_person"
+                    value={newCustomerData.contact_person}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={newCustomerData.email}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={newCustomerData.phone}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Address *
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={newCustomerData.address}
+                  onChange={handleNewCustomerChange}
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City *
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={newCustomerData.city}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Country *
+                  </label>
+                  <input
+                    type="text"
+                    name="country"
+                    value={newCustomerData.country}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sector *
+                  </label>
+                  <select
+                    name="sector"
+                    value={newCustomerData.sector}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  >
+                    {sectors.map((sector) => (
+                      <option key={sector} value={sector}>{sector}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setShowCustomerModal(false)} 
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Create Customer
                 </button>
               </div>
             </form>
