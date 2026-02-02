@@ -10,6 +10,8 @@ import Sales from './pages/Sales';
 import Costs from './pages/Costs';
 import Proposals from './pages/Proposals';
 import Reports from './pages/Reports';
+import Followups from './pages/Followups';
+import Admin from './pages/Admin';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -44,7 +46,9 @@ function AppRoutes() {
         <Route path="sales" element={<Customers />} />
         <Route path="costs" element={<Costs />} />
         <Route path="proposals" element={<Proposals />} />
+        <Route path="followups" element={<Followups />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="admin" element={<Admin />} />
       </Route>
     </Routes>
   );

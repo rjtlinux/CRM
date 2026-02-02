@@ -17,8 +17,14 @@ const Layout = () => {
     { path: '/sales', label: 'Sales', icon: '💰' },
     { path: '/costs', label: 'Costs', icon: '💳' },
     { path: '/proposals', label: 'Proposals', icon: '📄' },
+    { path: '/followups', label: 'Follow-ups', icon: '🔔' },
     { path: '/reports', label: 'Reports', icon: '📈' },
   ];
+
+  // Add Admin menu item only for admin users
+  const allNavItems = user?.role === 'admin' 
+    ? [...navItems, { path: '/admin', label: 'Admin', icon: '⚙️' }]
+    : navItems;
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -30,7 +36,7 @@ const Layout = () => {
         </div>
         
         <nav className="p-4">
-          {navItems.map((item) => (
+          {allNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -57,6 +63,14 @@ const Layout = () => {
             <div className="flex-1">
               <p className="font-medium text-sm">{user?.full_name}</p>
               <p className="text-xs text-gray-500">{user?.email}</p>
+              <span className={`inline-block px-2 py-0.5 text-xs rounded-full mt-1 ${
+                user?.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                user?.role === 'sales' ? 'bg-green-100 text-green-800' :
+                'bg-blue-100 text-blue-800'
+              }`}>
+                {user?.role === 'admin' ? '🔐 Admin' : 
+                 user?.role === 'sales' ? '💼 Sales' : '👤 User'}
+              </span>
             </div>
           </div>
           <button

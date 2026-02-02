@@ -108,4 +108,32 @@ export const leadsAPI = {
   getBySalesperson: (userId) => api.get(`/leads/by-salesperson/${userId}`),
 };
 
+// Followups API
+export const followupsAPI = {
+  getAll: () => api.get('/followups'),
+  getMissed: () => api.get('/followups/missed'),
+  getUpcoming: (days) => api.get('/followups/upcoming', { params: { days } }),
+  create: (data) => api.post('/followups', data),
+  update: (id, data) => api.put(`/followups/${id}`, data),
+  delete: (id) => api.delete(`/followups/${id}`),
+};
+
+// Reminders API
+export const remindersAPI = {
+  getAll: () => api.get('/reminders'),
+  getPending: () => api.get('/reminders/pending'),
+  markAsRead: (id) => api.put(`/reminders/${id}/read`),
+  delete: (id) => api.delete(`/reminders/${id}`),
+};
+
+// Users API (Admin)
+export const usersAPI = {
+  getAll: () => api.get('/auth/users'),
+  getById: (id) => api.get(`/auth/users/${id}`),
+  create: (data) => api.post('/auth/register', data),
+  update: (id, data) => api.put(`/auth/users/${id}`, data),
+  delete: (id) => api.delete(`/auth/users/${id}`),
+  updateRole: (id, role) => api.put(`/auth/users/${id}/role`, { role }),
+};
+
 export default api;
