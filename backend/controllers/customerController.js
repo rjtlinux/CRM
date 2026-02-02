@@ -30,7 +30,21 @@ const getCustomerById = async (req, res) => {
 
 const createCustomer = async (req, res) => {
   try {
-    const { company_name, contact_person, email, phone, address, city, country, sector } = req.body;
+    const { 
+      company_name, 
+      contact_person, 
+      contact_designation,
+      email, 
+      phone, 
+      address, 
+      pincode,
+      city, 
+      country, 
+      sector,
+      business_type,
+      generation_mode,
+      company_size
+    } = req.body;
     
     // Check if company name already exists
     const existingCustomer = await pool.query(
@@ -45,10 +59,29 @@ const createCustomer = async (req, res) => {
     }
     
     const result = await pool.query(
-      `INSERT INTO customers (company_name, contact_person, email, phone, address, city, country, sector, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO customers (
+        company_name, contact_person, contact_designation, email, phone, 
+        address, pincode, city, country, sector, 
+        business_type, generation_mode, company_size, created_by
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
-      [company_name, contact_person, email, phone, address, city, country, sector || 'Other', req.user.id]
+      [
+        company_name, 
+        contact_person, 
+        contact_designation,
+        email, 
+        phone, 
+        address, 
+        pincode,
+        city, 
+        country, 
+        sector || 'Other',
+        business_type || 'new',
+        generation_mode || 'web_enquiry',
+        company_size,
+        req.user.id
+      ]
     );
     
     res.status(201).json({ 
@@ -67,7 +100,22 @@ const createCustomer = async (req, res) => {
 const updateCustomer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { company_name, contact_person, email, phone, address, city, country, status, sector } = req.body;
+    const { 
+      company_name, 
+      contact_person, 
+      contact_designation,
+      email, 
+      phone, 
+      address, 
+      pincode,
+      city, 
+      country, 
+      status, 
+      sector,
+      business_type,
+      generation_mode,
+      company_size
+    } = req.body;
     
     // Check if company name already exists for another customer
     const existingCustomer = await pool.query(
@@ -83,11 +131,29 @@ const updateCustomer = async (req, res) => {
     
     const result = await pool.query(
       `UPDATE customers 
-       SET company_name = $1, contact_person = $2, email = $3, phone = $4, 
-           address = $5, city = $6, country = $7, status = $8, sector = $9
-       WHERE id = $10
+       SET company_name = $1, contact_person = $2, contact_designation = $3, 
+           email = $4, phone = $5, address = $6, pincode = $7, 
+           city = $8, country = $9, status = $10, sector = $11,
+           business_type = $12, generation_mode = $13, company_size = $14
+       WHERE id = $15
        RETURNING *`,
-      [company_name, contact_person, email, phone, address, city, country, status, sector || 'Other', id]
+      [
+        company_name, 
+        contact_person, 
+        contact_designation,
+        email, 
+        phone, 
+        address, 
+        pincode,
+        city, 
+        country, 
+        status, 
+        sector || 'Other',
+        business_type || 'new',
+        generation_mode || 'web_enquiry',
+        company_size,
+        id
+      ]
     );
     
     if (result.rows.length === 0) {

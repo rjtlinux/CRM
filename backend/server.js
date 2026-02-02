@@ -32,6 +32,7 @@ const opportunityRoutes = require('./routes/opportunityRoutes');
 const leadRoutes = require('./routes/leadRoutes');
 const followupRoutes = require('./routes/followupRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
+const opportunityActivityRoutes = require('./routes/opportunityActivityRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -41,6 +42,7 @@ app.use('/api/costs', costRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/opportunities', opportunityRoutes);
+app.use('/api/opportunity-activities', opportunityActivityRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/followups', followupRoutes);
 app.use('/api/reminders', reminderRoutes);

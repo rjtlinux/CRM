@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { opportunitiesAPI, customersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const Opportunities = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [opportunities, setOpportunities] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,12 +20,17 @@ const Opportunities = () => {
   const [newCustomerData, setNewCustomerData] = useState({
     company_name: '',
     contact_person: '',
+    contact_designation: '',
     email: '',
     phone: '',
     address: '',
+    pincode: '',
     city: '',
     country: '',
     sector: 'Other',
+    business_type: 'new',
+    generation_mode: 'web_enquiry',
+    company_size: '',
     status: 'active',
   });
 
@@ -43,6 +50,26 @@ const Opportunities = () => {
     'Hospitality',
     'Transportation',
     'Other'
+  ];
+
+  const businessTypes = [
+    { value: 'new', label: 'New Business' },
+    { value: 'old', label: 'Old Business' }
+  ];
+
+  const generationModes = [
+    { value: 'cold_call', label: 'Cold Call' },
+    { value: 'web_enquiry', label: 'Web Enquiry' },
+    { value: 'exhibition', label: 'Exhibition' },
+    { value: 'reference', label: 'Reference' }
+  ];
+
+  const companySizes = [
+    { value: 'micro', label: 'Micro (1-10 employees)' },
+    { value: 'small', label: 'Small (11-50 employees)' },
+    { value: 'medium', label: 'Medium (51-250 employees)' },
+    { value: 'large', label: 'Large (251-1000 employees)' },
+    { value: 'enterprise', label: 'Enterprise (1000+ employees)' }
   ];
   
   const [formData, setFormData] = useState({
@@ -186,12 +213,17 @@ const Opportunities = () => {
       setNewCustomerData({
         company_name: '',
         contact_person: '',
+        contact_designation: '',
         email: '',
         phone: '',
         address: '',
+        pincode: '',
         city: '',
         country: '',
         sector: 'Other',
+        business_type: 'new',
+        generation_mode: 'web_enquiry',
+        company_size: '',
         status: 'active',
       });
       
@@ -305,8 +337,8 @@ const Opportunities = () => {
                     {getOpportunitiesByStage(stage.key).map((opp) => (
                       <div
                         key={opp.id}
-                        className={`bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer ${getUrgencyColor(opp.urgency_status)}`}
-                        onClick={() => openModal(opp)}
+                        className={`bg-white p-4 rounded-lg shadow hover:shadow-md hover:scale-105 transition-all cursor-pointer ${getUrgencyColor(opp.urgency_status)}`}
+                        onClick={() => navigate(`/opportunities/${opp.id}`)}
                       >
                         <h4 className="font-semibold text-gray-800 mb-2">{opp.title}</h4>
                         <p className="text-sm text-gray-600 mb-2">{opp.customer_name}</p>
@@ -375,8 +407,12 @@ const Opportunities = () => {
               </thead>
               <tbody>
                 {filteredOpportunities.map((opp) => (
-                  <tr key={opp.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{opp.title}</td>
+                  <tr 
+                    key={opp.id} 
+                    className="border-b hover:bg-blue-50 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/opportunities/${opp.id}`)}
+                  >
+                    <td className="py-3 px-4 font-medium text-blue-600 hover:text-blue-800">{opp.title}</td>
                     <td className="py-3 px-4">{opp.customer_name}</td>
                     <td className="py-3 px-4 font-bold text-green-600">
                       ${parseFloat(opp.value).toLocaleString()}
@@ -637,118 +673,217 @@ const Opportunities = () => {
             </div>
             
             <form onSubmit={handleCreateNewCustomer} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Company Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="company_name"
-                    value={newCustomerData.company_name}
-                    onChange={handleNewCustomerChange}
-                    className="input-field"
-                    required
-                  />
+              {/* Company Information */}
+              <div className="border-b pb-3 mb-3">
+                <h3 className="text-md font-semibold text-gray-700 mb-2">Company Information</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="company_name"
+                      value={newCustomerData.company_name}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sector *
+                    </label>
+                    <select
+                      name="sector"
+                      value={newCustomerData.sector}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    >
+                      {sectors.map((sector) => (
+                        <option key={sector} value={sector}>{sector}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contact Person *
-                  </label>
-                  <input
-                    type="text"
-                    name="contact_person"
-                    value={newCustomerData.contact_person}
-                    onChange={handleNewCustomerChange}
-                    className="input-field"
-                    required
-                  />
+
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Size *
+                    </label>
+                    <select
+                      name="company_size"
+                      value={newCustomerData.company_size}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    >
+                      <option value="">Select Size</option>
+                      {companySizes.map((size) => (
+                        <option key={size.value} value={size.value}>{size.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Business Type *
+                    </label>
+                    <select
+                      name="business_type"
+                      value={newCustomerData.business_type}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    >
+                      {businessTypes.map((type) => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={newCustomerData.email}
-                    onChange={handleNewCustomerChange}
-                    className="input-field"
-                    required
-                  />
+              {/* Contact Information */}
+              <div className="border-b pb-3 mb-3">
+                <h3 className="text-md font-semibold text-gray-700 mb-2">Contact Information</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contact Person *
+                    </label>
+                    <input
+                      type="text"
+                      name="contact_person"
+                      value={newCustomerData.contact_person}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Designation *
+                    </label>
+                    <input
+                      type="text"
+                      name="contact_designation"
+                      value={newCustomerData.contact_designation}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      placeholder="e.g., CEO, Manager"
+                      required
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={newCustomerData.phone}
-                    onChange={handleNewCustomerChange}
-                    className="input-field"
-                    required
-                  />
+
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={newCustomerData.email}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={newCustomerData.phone}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* Address Information */}
+              <div className="border-b pb-3 mb-3">
+                <h3 className="text-md font-semibold text-gray-700 mb-2">Address</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address *
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={newCustomerData.address}
+                    onChange={handleNewCustomerChange}
+                    className="input-field"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={newCustomerData.city}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Pincode *
+                    </label>
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={newCustomerData.pincode}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Country *
+                    </label>
+                    <input
+                      type="text"
+                      name="country"
+                      value={newCustomerData.country}
+                      onChange={handleNewCustomerChange}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Lead Information */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address *
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={newCustomerData.address}
-                  onChange={handleNewCustomerChange}
-                  className="input-field"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
+                <h3 className="text-md font-semibold text-gray-700 mb-2">Lead Information</h3>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City *
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={newCustomerData.city}
-                    onChange={handleNewCustomerChange}
-                    className="input-field"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Country *
-                  </label>
-                  <input
-                    type="text"
-                    name="country"
-                    value={newCustomerData.country}
-                    onChange={handleNewCustomerChange}
-                    className="input-field"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sector *
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Generation Mode *
                   </label>
                   <select
-                    name="sector"
-                    value={newCustomerData.sector}
+                    name="generation_mode"
+                    value={newCustomerData.generation_mode}
                     onChange={handleNewCustomerChange}
                     className="input-field"
                     required
                   >
-                    {sectors.map((sector) => (
-                      <option key={sector} value={sector}>{sector}</option>
+                    {generationModes.map((mode) => (
+                      <option key={mode.value} value={mode.value}>{mode.label}</option>
                     ))}
                   </select>
                 </div>

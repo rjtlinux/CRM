@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Opportunities from './pages/Opportunities';
+import OpportunityTicket from './pages/OpportunityTicket';
 import Customers from './pages/Customers';
 import Sales from './pages/Sales';
 import Costs from './pages/Costs';
@@ -38,8 +39,9 @@ function AppRoutes() {
       >
         <Route index element={<Dashboard />} />
         <Route path="opportunities" element={<Opportunities />} />
+        <Route path="opportunities/:id" element={<OpportunityTicket />} />
         <Route path="customers" element={<Customers />} />
-        <Route path="sales" element={<Sales />} />
+        <Route path="sales" element={<Customers />} />
         <Route path="costs" element={<Costs />} />
         <Route path="proposals" element={<Proposals />} />
         <Route path="reports" element={<Reports />} />
