@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const {
   getActivities,
   addActivity,
@@ -11,7 +11,7 @@ const {
 } = require('../controllers/opportunityActivityController');
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticateToken);
 
 // Activity routes
 router.get('/:opportunityId/activities', getActivities);
