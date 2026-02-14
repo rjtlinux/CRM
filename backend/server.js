@@ -33,6 +33,7 @@ const leadRoutes = require('./routes/leadRoutes');
 const followupRoutes = require('./routes/followupRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const opportunityActivityRoutes = require('./routes/opportunityActivityRoutes');
+const udharKhataRoutes = require('./routes/udharKhataRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -46,6 +47,7 @@ app.use('/api/opportunity-activities', opportunityActivityRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/followups', followupRoutes);
 app.use('/api/reminders', reminderRoutes);
+app.use('/api/udhar-khata', udharKhataRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

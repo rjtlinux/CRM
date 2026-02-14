@@ -1,8 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSwitch from './LanguageSwitch';
 
 const Layout = () => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -11,19 +14,20 @@ const Layout = () => {
   };
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/opportunities', label: 'Opportunities', icon: '💼' },
-    { path: '/customers', label: 'Customers', icon: '👥' },
-    { path: '/sales', label: 'Sales', icon: '💰' },
-    { path: '/costs', label: 'Costs', icon: '💳' },
-    { path: '/proposals', label: 'Proposals', icon: '📄' },
-    { path: '/followups', label: 'Follow-ups', icon: '🔔' },
-    { path: '/reports', label: 'Reports', icon: '📈' },
+    { path: '/', label: t('dashboard'), icon: '📊' },
+    { path: '/udhar-khata', label: t('udharKhata'), icon: '📕' },
+    { path: '/opportunities', label: t('opportunities'), icon: '💼' },
+    { path: '/customers', label: t('customers'), icon: '👥' },
+    { path: '/sales', label: t('sales'), icon: '💰' },
+    { path: '/costs', label: t('costs'), icon: '💳' },
+    { path: '/proposals', label: t('proposals'), icon: '📄' },
+    { path: '/followups', label: t('followups'), icon: '🔔' },
+    { path: '/reports', label: t('reports'), icon: '📈' },
   ];
 
   // Add Admin menu item only for admin users
   const allNavItems = user?.role === 'admin' 
-    ? [...navItems, { path: '/admin', label: 'Admin', icon: '⚙️' }]
+    ? [...navItems, { path: '/admin', label: t('admin'), icon: '⚙️' }]
     : navItems;
 
   return (
@@ -32,7 +36,10 @@ const Layout = () => {
       <aside className="w-64 bg-white shadow-lg">
         <div className="p-6 border-b">
           <h1 className="text-2xl font-bold text-primary-600">CRM System</h1>
-          <p className="text-sm text-gray-500 mt-1">Enterprise Edition</p>
+          <p className="text-sm text-gray-500 mt-1">Indian Edition</p>
+          <div className="mt-3">
+            <LanguageSwitch />
+          </div>
         </div>
         
         <nav className="p-4">

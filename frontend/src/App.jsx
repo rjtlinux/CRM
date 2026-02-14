@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +13,7 @@ import Proposals from './pages/Proposals';
 import Reports from './pages/Reports';
 import Followups from './pages/Followups';
 import Admin from './pages/Admin';
+import UdharKhata from './pages/UdharKhata';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -47,6 +49,7 @@ function AppRoutes() {
         <Route path="costs" element={<Costs />} />
         <Route path="proposals" element={<Proposals />} />
         <Route path="followups" element={<Followups />} />
+        <Route path="udhar-khata" element={<UdharKhata />} />
         <Route path="reports" element={<Reports />} />
         <Route path="admin" element={<Admin />} />
       </Route>
@@ -57,9 +60,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
+      <LanguageProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </LanguageProvider>
     </AuthProvider>
   );
 }
