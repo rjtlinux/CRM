@@ -6,7 +6,7 @@ import { openWhatsApp, generatePaymentReminderMessage } from '../utils/whatsappU
 import { useLanguage } from '../context/LanguageContext';
 
 const UdharKhata = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ const UdharKhata = () => {
     const message = generatePaymentReminderMessage(
       customer.company_name,
       customer.outstanding_amount,
-      'hi'
+      language
     );
     openWhatsApp(customer.phone, message);
   };
@@ -62,11 +62,11 @@ const UdharKhata = () => {
   const totalCustomers = customers.length;
 
   const getRiskBadge = (days) => {
-    if (!days) return { color: 'bg-gray-100 text-gray-800', text: 'नया' };
-    if (days > 90) return { color: 'bg-red-100 text-red-800', text: 'खतरनाक' };
-    if (days > 60) return { color: 'bg-orange-100 text-orange-800', text: 'उच्च' };
-    if (days > 30) return { color: 'bg-yellow-100 text-yellow-800', text: 'मध्यम' };
-    return { color: 'bg-green-100 text-green-800', text: 'कम' };
+    if (!days) return { color: 'bg-gray-100 text-gray-800', text: t('newRisk') };
+    if (days > 90) return { color: 'bg-red-100 text-red-800', text: t('dangerousRisk') };
+    if (days > 60) return { color: 'bg-orange-100 text-orange-800', text: t('highRisk') };
+    if (days > 30) return { color: 'bg-yellow-100 text-yellow-800', text: t('mediumRisk') };
+    return { color: 'bg-green-100 text-green-800', text: t('lowRisk') };
   };
 
   if (loading) {
@@ -79,13 +79,13 @@ const UdharKhata = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">📕 {t('udharKhata')}</h1>
-          <p className="text-gray-600 mt-1">बकाया भुगतान ट्रैक करें</p>
+          <p className="text-gray-600 mt-1">{t('trackOutstandingPayments')}</p>
         </div>
         <button 
           onClick={fetchUdharData}
           className="btn-secondary"
         >
-          🔄 {t('refresh') || 'रिफ्रेश करें'}
+          🔄 {t('refresh')}
         </button>
       </div>
 
@@ -97,17 +97,17 @@ const UdharKhata = () => {
             {formatIndianCurrency(totalOutstanding)}
           </div>
           <div className="text-sm text-gray-500 mt-2">
-            {totalCustomers} {t('customers')} से बकाया
+            {totalCustomers} {t('customers')} {t('outstandingFrom')}
           </div>
         </div>
 
         <div className="card bg-blue-50 border-l-4 border-blue-500">
-          <div className="text-sm text-gray-600 mb-1">औसत बकाया प्रति ग्राहक</div>
+          <div className="text-sm text-gray-600 mb-1">{t('avgOutstandingPerCustomer')}</div>
           <div className="text-3xl font-bold text-blue-600">
             {formatIndianCurrency(totalCustomers > 0 ? totalOutstanding / totalCustomers : 0)}
           </div>
           <div className="text-sm text-gray-500 mt-2">
-            {customers.filter(c => (c.days_since_last_payment || 0) > 30).length} ग्राहक 30+ दिन से पेंडिंग
+            {customers.filter(c => (c.days_since_last_payment || 0) > 30).length} {t('customersPending30Days')}
           </div>
         </div>
       </div>
@@ -118,7 +118,7 @@ const UdharKhata = () => {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="🔍 ग्राहक का नाम खोजें..."
+              placeholder={t('searchCustomerName')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input-field"
@@ -129,19 +129,19 @@ const UdharKhata = () => {
               onClick={() => setSortBy('amount')}
               className={`px-4 py-2 rounded-lg ${sortBy === 'amount' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
             >
-              राशि से
+              {t('sortByAmount')}
             </button>
             <button
               onClick={() => setSortBy('days')}
               className={`px-4 py-2 rounded-lg ${sortBy === 'days' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
             >
-              दिन से
+              {t('sortByDays')}
             </button>
             <button
               onClick={() => setSortBy('name')}
               className={`px-4 py-2 rounded-lg ${sortBy === 'name' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
             >
-              नाम से
+              {t('sortByName')}
             </button>
           </div>
         </div>
@@ -152,8 +152,8 @@ const UdharKhata = () => {
         {filteredCustomers.length === 0 ? (
           <div className="card text-center py-12">
             <div className="text-6xl mb-4">🎉</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">बधाई हो!</h3>
-            <p className="text-gray-600">कोई बकाया नहीं है। सभी भुगतान प्राप्त हो गए हैं।</p>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">{t('congratulations')}</h3>
+            <p className="text-gray-600">{t('noOutstandingAllPaid')}</p>
           </div>
         ) : (
           filteredCustomers.map((customer) => {
@@ -184,14 +184,14 @@ const UdharKhata = () => {
 
                     <div className="flex flex-wrap gap-3 mt-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${riskBadge.color}`}>
-                        {riskBadge.text} जोखिम
+                        {riskBadge.text} {t('risk')}
                       </span>
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {customer.pending_invoices} बिल पेंडिंग
+                        {customer.pending_invoices} {t('billsPending')}
                       </span>
                       {customer.last_payment_date && (
                         <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          अंतिम भुगतान: {formatRelativeTime(customer.last_payment_date, 'hi')}
+                          {t('lastPaymentColon')} {formatRelativeTime(customer.last_payment_date, language)}
                         </span>
                       )}
                     </div>
@@ -200,7 +200,7 @@ const UdharKhata = () => {
                   {/* Amount and Actions */}
                   <div className="flex flex-col items-end gap-3">
                     <div className="text-right">
-                      <div className="text-sm text-gray-600 mb-1">बकाया राशि</div>
+                      <div className="text-sm text-gray-600 mb-1">{t('outstandingAmount')}</div>
                       <div className="text-2xl font-bold text-red-600">
                         {formatIndianCurrency(customer.outstanding_amount)}
                       </div>
@@ -213,10 +213,10 @@ const UdharKhata = () => {
                           handleSendReminder(customer);
                         }}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                        title="WhatsApp से रिमाइंडर भेजें"
+                        title={t('sendReminder')}
                       >
                         <span>📱</span>
-                        <span className="hidden md:inline">रिमाइंडर</span>
+                        <span className="hidden md:inline">{t('reminder')}</span>
                       </button>
                       <button
                         onClick={(e) => {
@@ -226,7 +226,7 @@ const UdharKhata = () => {
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                       >
                         <span>💰</span>
-                        <span className="hidden md:inline">भुगतान</span>
+                        <span className="hidden md:inline">{t('payment')}</span>
                       </button>
                     </div>
                   </div>
@@ -236,8 +236,8 @@ const UdharKhata = () => {
                 {customer.days_since_last_payment > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <div className="text-sm text-gray-600">
-                      💡 टिप: {customer.days_since_last_payment} दिन से कोई भुगतान नहीं मिला है।
-                      {customer.days_since_last_payment > 60 && ' तुरंत फॉलो-अप करें!'}
+                      {t('tipNoPaymentSince')} {customer.days_since_last_payment} {t('daysNoPayment')}
+                      {customer.days_since_last_payment > 60 && ` ${t('followupImmediately')}`}
                     </div>
                   </div>
                 )}
@@ -251,15 +251,15 @@ const UdharKhata = () => {
       {customers.length === 0 && (
         <div className="card text-center py-12">
           <div className="text-6xl mb-4">📕</div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">उधार खाता खाली है</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">{t('udharKhataEmpty')}</h3>
           <p className="text-gray-600 mb-4">
-            कोई बकाया भुगतान नहीं है। जब आप उधार बिक्री करेंगे तो यहाँ दिखेगा।
+            {t('noOutstandingPayments')}
           </p>
           <button
             onClick={() => navigate('/sales')}
             className="btn-primary"
           >
-            नई बिक्री जोड़ें
+            {t('addNewSale')}
           </button>
         </div>
       )}
