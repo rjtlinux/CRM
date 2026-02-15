@@ -23,6 +23,9 @@ const Customers = () => {
     generation_mode: 'web_enquiry',
     company_size: '',
     status: 'active',
+    gstin: '',
+    gst_state: '',
+    gst_registration_type: 'regular',
   });
 
   const sectors = [
@@ -459,6 +462,60 @@ const Customers = () => {
                     >
                       <option value="active">{t('active')}</option>
                       <option value="inactive">{t('inactive')}</option>
+                    </select>
+                  </div>
+
+                  {/* GST Details */}
+                  <div className="col-span-2 border-t border-gray-200 pt-4 mt-4 mb-2">
+                    <h3 className="text-base font-semibold text-gray-900">{t('gstDetails')}</h3>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      GSTIN
+                    </label>
+                    <input
+                      type="text"
+                      name="gstin"
+                      value={formData.gstin}
+                      onChange={handleChange}
+                      className="input-field"
+                      placeholder="27AAAAA0000A1Z5"
+                      pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9]{1}Z[0-9A-Z]{1}"
+                      maxLength="15"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('gstinFormat')}: 15 {t('characters')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('gstState')}
+                    </label>
+                    <input
+                      type="text"
+                      name="gst_state"
+                      value={formData.gst_state}
+                      onChange={handleChange}
+                      className="input-field"
+                      placeholder={t('stateName')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('gstRegistrationType')}
+                    </label>
+                    <select
+                      name="gst_registration_type"
+                      value={formData.gst_registration_type}
+                      onChange={handleChange}
+                      className="input-field"
+                    >
+                      <option value="regular">{t('regular')}</option>
+                      <option value="composition">{t('composition')}</option>
+                      <option value="unregistered">{t('unregistered')}</option>
                     </select>
                   </div>
                 </div>
