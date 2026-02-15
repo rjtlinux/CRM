@@ -167,6 +167,17 @@ const Dashboard = () => {
     );
   }
 
+  // Show mobile-optimized dashboard on small screens
+  if (isMobile) {
+    return (
+      <>
+        <MobileDashboard />
+        <FloatingActionButton />
+      </>
+    );
+  }
+
+  // Desktop view
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
