@@ -35,8 +35,11 @@ const Layout = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-lg">
         <div className="p-6 border-b">
-          <h1 className="text-2xl font-bold text-primary-600">CRM System</h1>
-          <p className="text-sm text-gray-500 mt-1">Indian Edition</p>
+          <div className="flex items-center gap-3 mb-2">
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-10 w-10" />
+            <h1 className="text-2xl font-bold text-primary-600">Buzeye</h1>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">Business CRM</p>
           <div className="mt-3">
             <LanguageSwitch />
           </div>

@@ -1,6 +1,6 @@
-# Enterprise CRM System
+# Buzeye - Business CRM
 
-A comprehensive CRM (Customer Relationship Management) system designed for small enterprises to manage sales, costs, proposals, and business analytics.
+A comprehensive CRM (Customer Relationship Management) system designed for small businesses and enterprises in India to manage sales, costs, proposals, credit book, and business analytics.
 
 ## Features
 

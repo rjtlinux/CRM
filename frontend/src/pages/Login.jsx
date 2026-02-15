@@ -54,6 +54,9 @@ const Login = () => {
       </div>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-16 w-16" />
+          </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             {isLogin ? t('welcomeBack') : t('createAccount')}
           </h1>

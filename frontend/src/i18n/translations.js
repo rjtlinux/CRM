@@ -199,12 +199,12 @@ export const translations = {
     thisYear: 'इस साल',
     
     // User & Auth / Login Page
-    welcomeToCRM: 'सीआरएम सिस्टम में आपका स्वागत है',
+    welcomeToCRM: 'Buzeye में आपका स्वागत है',
     welcomeBack: 'वापसी पर स्वागत है',
     createAccount: 'खाता बनाएं',
     signIn: 'साइन इन करें',
     signUp: 'साइन अप करें',
-    signInToCRM: 'अपने सीआरएम खाते में साइन इन करें',
+    signInToCRM: 'अपने Buzeye खाते में साइन इन करें',
     startManagingBusiness: 'अपने व्यवसाय का प्रबंधन शुरू करें',
     alreadyHaveAccount: 'पहले से खाता है?',
     dontHaveAccount: 'खाता नहीं है?',
@@ -1219,6 +1219,23 @@ export const translations = {
     activityLoggedSuccessfully: 'Activity logged successfully!',
     failedToLogActivity: 'Failed to log activity',
     by: 'by',
+    
+    // User & Auth / Login Page (English)
+    welcomeToCRM: 'Welcome to Buzeye',
+    welcomeBack: 'Welcome Back',
+    createAccount: 'Create Account',
+    signIn: 'Sign In',
+    signUp: 'Sign Up',
+    signInToCRM: 'Sign in to your Buzeye account',
+    startManagingBusiness: 'Start managing your business',
+    alreadyHaveAccount: 'Already have an account?',
+    dontHaveAccount: "Don't have an account?",
+    emailAddress: 'Email Address',
+    demoCredentials: 'Demo Credentials:',
+    demoEmail: 'Email: admin@crm.com',
+    demoPassword: 'Password: admin123',
+    pleaseWait: 'Please wait...',
+    unexpectedError: 'An unexpected error occurred',
   }
 };
 

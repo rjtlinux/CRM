@@ -6,6 +6,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    allowedHosts: [
+      'localhost',
+      'buzeye.com',
+      'www.buzeye.com',
+      '.buzeye.com'
+    ],
     watch: {
       usePolling: true,
     },
