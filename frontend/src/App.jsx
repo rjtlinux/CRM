@@ -16,6 +16,9 @@ import Admin from './pages/Admin';
 import UdharKhata from './pages/UdharKhata';
 import GSTDashboard from './pages/GSTDashboard';
 import GSTInvoice from './pages/GSTInvoice';
+import GSTInvoices from './pages/GSTInvoices';
+import GSTSettings from './pages/GSTSettings';
+import GSTReports from './pages/GSTReports';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -55,8 +58,12 @@ function AppRoutes() {
         <Route path="reports" element={<Reports />} />
         <Route path="admin" element={<Admin />} />
         <Route path="gst" element={<GSTDashboard />} />
+        <Route path="gst/invoices" element={<GSTInvoices />} />
         <Route path="gst/invoice/new" element={<GSTInvoice />} />
         <Route path="gst/invoice/:id" element={<GSTInvoice />} />
+        <Route path="gst/settings" element={<GSTSettings />} />
+        <Route path="gst/reports/gstr1" element={<GSTReports />} />
+        <Route path="gst/reports/gstr3b" element={<GSTReports />} />
       </Route>
     </Routes>
   );
