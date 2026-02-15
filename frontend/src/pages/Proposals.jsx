@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { proposalsAPI, customersAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const Proposals = () => {
+  const { t } = useLanguage();
   const [proposals, setProposals] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,23 +37,23 @@ const Proposals = () => {
   ];
 
   const businessTypes = [
-    { value: 'new', label: 'New Business' },
-    { value: 'old', label: 'Old Business' }
+    { value: 'new', labelKey: 'newBusiness' },
+    { value: 'old', labelKey: 'oldBusiness' }
   ];
 
   const generationModes = [
-    { value: 'cold_call', label: 'Cold Call' },
-    { value: 'web_enquiry', label: 'Web Enquiry' },
-    { value: 'exhibition', label: 'Exhibition' },
-    { value: 'reference', label: 'Reference' }
+    { value: 'cold_call', labelKey: 'coldCall' },
+    { value: 'web_enquiry', labelKey: 'webEnquiry' },
+    { value: 'exhibition', labelKey: 'exhibition' },
+    { value: 'reference', labelKey: 'reference' }
   ];
 
   const companySizes = [
-    { value: 'micro', label: 'Micro (1-10 employees)' },
-    { value: 'small', label: 'Small (11-50 employees)' },
-    { value: 'medium', label: 'Medium (51-250 employees)' },
-    { value: 'large', label: 'Large (251-1000 employees)' },
-    { value: 'enterprise', label: 'Enterprise (1000+ employees)' }
+    { value: 'micro', labelKey: 'companySizeMicro' },
+    { value: 'small', labelKey: 'companySizeSmall' },
+    { value: 'medium', labelKey: 'companySizeMedium' },
+    { value: 'large', labelKey: 'companySizeLarge' },
+    { value: 'enterprise', labelKey: 'companySizeEnterprise' }
   ];
   
   const [formData, setFormData] = useState({
@@ -96,19 +98,19 @@ const Proposals = () => {
       closeModal();
     } catch (error) {
       console.error('Error saving proposal:', error);
-      alert('Failed to save proposal');
+      alert(t('failedToSaveProposal'));
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this proposal?')) return;
+    if (!window.confirm(t('confirmDeleteProposal'))) return;
     
     try {
       await proposalsAPI.delete(id);
       fetchData();
     } catch (error) {
       console.error('Error deleting proposal:', error);
-      alert('Failed to delete proposal');
+      alert(t('failedToDeleteProposal'));
     }
   };
 
@@ -195,10 +197,10 @@ const Proposals = () => {
         status: 'active',
       });
       
-      alert('Customer created successfully!');
+      alert(t('successfullyCreated'));
     } catch (error) {
       console.error('Error creating customer:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to create customer';
+      const errorMessage = error.response?.data?.error || t('failedToCreateCustomer');
       alert(errorMessage);
     }
   };
@@ -220,40 +222,40 @@ const Proposals = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading proposals...</div>;
+    return <div className="text-center py-8">{t('loadingProposals')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Proposals</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{t('proposals')}</h1>
         <button onClick={() => openModal()} className="btn-primary">
-          + Create Proposal
+          + {t('createProposal')}
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-6">
         <div className="card bg-gray-50">
-          <div className="text-sm text-gray-600">Draft</div>
+          <div className="text-sm text-gray-600">{t('draft')}</div>
           <div className="text-2xl font-bold text-gray-600">
             {proposals.filter(p => p.status === 'draft').length}
           </div>
         </div>
         <div className="card bg-blue-50">
-          <div className="text-sm text-gray-600">Sent</div>
+          <div className="text-sm text-gray-600">{t('sent')}</div>
           <div className="text-2xl font-bold text-blue-600">
             {proposals.filter(p => p.status === 'sent').length}
           </div>
         </div>
         <div className="card bg-green-50">
-          <div className="text-sm text-gray-600">Accepted</div>
+          <div className="text-sm text-gray-600">{t('accepted')}</div>
           <div className="text-2xl font-bold text-green-600">
             {proposals.filter(p => p.status === 'accepted').length}
           </div>
         </div>
         <div className="card bg-red-50">
-          <div className="text-sm text-gray-600">Rejected</div>
+          <div className="text-sm text-gray-600">{t('rejected')}</div>
           <div className="text-2xl font-bold text-red-600">
             {proposals.filter(p => p.status === 'rejected').length}
           </div>
@@ -265,13 +267,13 @@ const Proposals = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-3 px-4">Proposal #</th>
-                <th className="text-left py-3 px-4">Customer</th>
-                <th className="text-left py-3 px-4">Title</th>
-                <th className="text-left py-3 px-4">Amount</th>
-                <th className="text-left py-3 px-4">Valid Until</th>
-                <th className="text-left py-3 px-4">Status</th>
-                <th className="text-left py-3 px-4">Actions</th>
+                <th className="text-left py-3 px-4">{t('proposalHash')}</th>
+                <th className="text-left py-3 px-4">{t('customer')}</th>
+                <th className="text-left py-3 px-4">{t('title')}</th>
+                <th className="text-left py-3 px-4">{t('amount')}</th>
+                <th className="text-left py-3 px-4">{t('validUntil')}</th>
+                <th className="text-left py-3 px-4">{t('status')}</th>
+                <th className="text-left py-3 px-4">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -288,7 +290,7 @@ const Proposals = () => {
                   </td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(proposal.status)}`}>
-                      {proposal.status}
+                      {t(proposal.status)}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -296,13 +298,13 @@ const Proposals = () => {
                       onClick={() => openModal(proposal)}
                       className="text-blue-600 hover:text-blue-800 mr-3"
                     >
-                      Edit
+                      {t('edit')}
                     </button>
                     <button
                       onClick={() => handleDelete(proposal.id)}
                       className="text-red-600 hover:text-red-800"
                     >
-                      Delete
+                      {t('delete')}
                     </button>
                   </td>
                 </tr>
@@ -316,15 +318,15 @@ const Proposals = () => {
       {showCustomerModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-6">Create New Customer</h2>
+            <h2 className="text-2xl font-bold mb-6">{t('createNewCustomer')}</h2>
             <form onSubmit={handleCreateNewCustomer} className="space-y-4">
               {/* Company Information */}
               <div className="border-b pb-4">
-                <h3 className="text-lg font-semibold mb-3">Company Information</h3>
+                <h3 className="text-lg font-semibold mb-3">{t('companyInformation')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Company Name *
+                      {t('companyName')} *
                     </label>
                     <input
                       type="text"
@@ -337,7 +339,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sector *
+                      {t('sector')} *
                     </label>
                     <select
                       name="sector"
@@ -347,13 +349,13 @@ const Proposals = () => {
                       required
                     >
                       {sectors.map(sector => (
-                        <option key={sector} value={sector}>{sector}</option>
+                        <option key={sector} value={sector}>{t('sector' + sector.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(''))}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Company Size
+                      {t('companySize')}
                     </label>
                     <select
                       name="company_size"
@@ -361,15 +363,15 @@ const Proposals = () => {
                       onChange={handleNewCustomerChange}
                       className="input-field"
                     >
-                      <option value="">Select Size</option>
+                      <option value="">{t('selectSize')}</option>
                       {companySizes.map(size => (
-                        <option key={size.value} value={size.value}>{size.label}</option>
+                        <option key={size.value} value={size.value}>{t(size.labelKey)}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Business Type *
+                      {t('businessType')} *
                     </label>
                     <select
                       name="business_type"
@@ -379,7 +381,7 @@ const Proposals = () => {
                       required
                     >
                       {businessTypes.map(type => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
+                        <option key={type.value} value={type.value}>{t(type.labelKey)}</option>
                       ))}
                     </select>
                   </div>
@@ -388,11 +390,11 @@ const Proposals = () => {
 
               {/* Contact Information */}
               <div className="border-b pb-4">
-                <h3 className="text-lg font-semibold mb-3">Contact Information</h3>
+                <h3 className="text-lg font-semibold mb-3">{t('contactInformation')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Person *
+                      {t('contactPerson')} *
                     </label>
                     <input
                       type="text"
@@ -405,7 +407,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Designation
+                      {t('contactDesignation')}
                     </label>
                     <input
                       type="text"
@@ -417,7 +419,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email *
+                      {t('email')} *
                     </label>
                     <input
                       type="email"
@@ -430,7 +432,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone *
+                      {t('phone')} *
                     </label>
                     <input
                       type="tel"
@@ -446,11 +448,11 @@ const Proposals = () => {
 
               {/* Address & Lead Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Address & Lead Information</h3>
+                <h3 className="text-lg font-semibold mb-3">{t('addressAndLeadInfo')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Address
+                      {t('address')}
                     </label>
                     <input
                       type="text"
@@ -462,7 +464,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
+                      {t('city')}
                     </label>
                     <input
                       type="text"
@@ -474,7 +476,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pincode
+                      {t('pincode')}
                     </label>
                     <input
                       type="text"
@@ -486,7 +488,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Country
+                      {t('country')}
                     </label>
                     <input
                       type="text"
@@ -498,7 +500,7 @@ const Proposals = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Generation Mode *
+                      {t('generationMode')} *
                     </label>
                     <select
                       name="generation_mode"
@@ -508,7 +510,7 @@ const Proposals = () => {
                       required
                     >
                       {generationModes.map(mode => (
-                        <option key={mode.value} value={mode.value}>{mode.label}</option>
+                        <option key={mode.value} value={mode.value}>{t(mode.labelKey)}</option>
                       ))}
                     </select>
                   </div>
@@ -521,10 +523,10 @@ const Proposals = () => {
                   onClick={() => setShowCustomerModal(false)}
                   className="btn-secondary"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  Create Customer
+                  {t('createCustomer')}
                 </button>
               </div>
             </form>
@@ -537,13 +539,13 @@ const Proposals = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6">
-              {editingProposal ? 'Edit Proposal' : 'Create New Proposal'}
+              {editingProposal ? t('editProposal') : t('createNewProposal')}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Proposal Number *
+                    {t('proposalNumber')} *
                   </label>
                   <input
                     type="text"
@@ -556,12 +558,12 @@ const Proposals = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Customer *
+                    {t('customer')} *
                   </label>
                   <div className="space-y-2">
                     <input
                       type="text"
-                      placeholder="🔍 Search customer..."
+                      placeholder={`🔍 ${t('searchCustomer')}`}
                       value={customerSearch}
                       onChange={(e) => setCustomerSearch(e.target.value)}
                       className="input-field"
@@ -571,7 +573,7 @@ const Proposals = () => {
                       onClick={() => setShowCustomerModal(true)}
                       className="w-full text-left px-3 py-2 border border-dashed border-blue-500 rounded text-blue-600 hover:bg-blue-50 transition-colors text-sm"
                     >
-                      + Create New Customer
+                      + {t('createNewCustomer')}
                     </button>
                     <select
                       name="customer_id"
@@ -580,7 +582,7 @@ const Proposals = () => {
                       className="input-field"
                       required
                     >
-                      <option value="">Select Customer</option>
+                      <option value="">{t('selectCustomer')}</option>
                       {filteredCustomers.map((customer) => (
                         <option key={customer.id} value={customer.id}>
                           {customer.company_name} - {customer.contact_person}
@@ -593,7 +595,7 @@ const Proposals = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Title *
+                  {t('title')} *
                 </label>
                 <input
                   type="text"
@@ -607,7 +609,7 @@ const Proposals = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                  {t('description')}
                 </label>
                 <textarea
                   name="description"
@@ -621,7 +623,7 @@ const Proposals = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Total Amount *
+                    {t('totalAmount')} *
                   </label>
                   <input
                     type="number"
@@ -636,7 +638,7 @@ const Proposals = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
+                    {t('status')}
                   </label>
                   <select
                     name="status"
@@ -644,15 +646,15 @@ const Proposals = () => {
                     onChange={handleChange}
                     className="input-field"
                   >
-                    <option value="draft">Draft</option>
-                    <option value="sent">Sent</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="rejected">Rejected</option>
+                    <option value="draft">{t('draft')}</option>
+                    <option value="sent">{t('sent')}</option>
+                    <option value="accepted">{t('accepted')}</option>
+                    <option value="rejected">{t('rejected')}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Valid Until
+                    {t('validUntil')}
                   </label>
                   <input
                     type="date"
@@ -666,10 +668,10 @@ const Proposals = () => {
 
               <div className="flex justify-end gap-3 mt-6">
                 <button type="button" onClick={closeModal} className="btn-secondary">
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  {editingProposal ? 'Update' : 'Create'} Proposal
+                  {editingProposal ? t('updateProposal') : t('createProposal')}
                 </button>
               </div>
             </form>

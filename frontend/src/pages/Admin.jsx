@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const Admin = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -17,7 +19,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (user?.role !== 'admin') {
-      alert('Access denied. Admin only.');
+      alert(t('accessDeniedAdminOnly'));
       window.location.href = '/';
       return;
     }
@@ -31,7 +33,7 @@ const Admin = () => {
       setUsers(response.data.users || []);
     } catch (error) {
       console.error('Error fetching users:', error);
-      alert('Failed to fetch users. You may not have admin permissions.');
+      alert(t('failedToFetchUsers'));
     } finally {
       setLoading(false);
     }
@@ -53,24 +55,24 @@ const Admin = () => {
       }
       fetchUsers();
       closeModal();
-      alert(editingUser ? 'User updated successfully!' : 'User created successfully!');
+      alert(editingUser ? t('successfullyUpdated') : t('successfullyCreated'));
     } catch (error) {
       console.error('Error saving user:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to save user';
+      const errorMessage = error.response?.data?.error || t('failedToSave');
       alert(errorMessage);
     }
   };
 
   const handleDelete = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    if (!window.confirm(t('confirmDeleteUser'))) return;
     
     try {
       await usersAPI.delete(userId);
       fetchUsers();
-      alert('User deleted successfully');
+      alert(t('successfullyDeleted'));
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Failed to delete user');
+      alert(t('failedToDeleteUser'));
     }
   };
 
@@ -78,10 +80,10 @@ const Admin = () => {
     try {
       await usersAPI.updateRole(userId, newRole);
       fetchUsers();
-      alert('User role updated successfully');
+      alert(t('userRoleUpdatedSuccessfully'));
     } catch (error) {
       console.error('Error updating role:', error);
-      alert('Failed to update user role');
+      alert(t('failedToUpdateUserRole'));
     }
   };
 
@@ -128,41 +130,41 @@ const Admin = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading users...</div>;
+    return <div className="text-center py-8">{t('loading')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-          <p className="text-gray-600 mt-2">Manage users, sales team, and access control</p>
+          <h1 className="text-3xl font-bold text-gray-800">{t('userManagement')}</h1>
+          <p className="text-gray-600 mt-2">{t('manageUsersSubtitle')}</p>
         </div>
         <button onClick={() => openModal()} className="btn-primary">
-          + Create New User
+          + {t('createUser')}
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-6">
         <div className="card bg-purple-50">
-          <div className="text-sm text-gray-600">Total Users</div>
+          <div className="text-sm text-gray-600">{t('totalUsers')}</div>
           <div className="text-2xl font-bold text-purple-600">{users.length}</div>
         </div>
         <div className="card bg-blue-50">
-          <div className="text-sm text-gray-600">Regular Users</div>
+          <div className="text-sm text-gray-600">{t('regularUsers')}</div>
           <div className="text-2xl font-bold text-blue-600">
             {users.filter(u => u.role === 'user').length}
           </div>
         </div>
         <div className="card bg-green-50">
-          <div className="text-sm text-gray-600">Sales Team</div>
+          <div className="text-sm text-gray-600">{t('salesTeam')}</div>
           <div className="text-2xl font-bold text-green-600">
             {users.filter(u => u.role === 'sales').length}
           </div>
         </div>
         <div className="card bg-gray-50">
-          <div className="text-sm text-gray-600">Admins</div>
+          <div className="text-sm text-gray-600">{t('admins')}</div>
           <div className="text-2xl font-bold text-gray-600">
             {users.filter(u => u.role === 'admin').length}
           </div>
@@ -175,18 +177,18 @@ const Admin = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-3 px-4">Name</th>
-                <th className="text-left py-3 px-4">Email</th>
-                <th className="text-left py-3 px-4">Role</th>
-                <th className="text-left py-3 px-4">Created</th>
-                <th className="text-left py-3 px-4">Actions</th>
+                <th className="text-left py-3 px-4">{t('name')}</th>
+                <th className="text-left py-3 px-4">{t('email')}</th>
+                <th className="text-left py-3 px-4">{t('role')}</th>
+                <th className="text-left py-3 px-4">{t('created')}</th>
+                <th className="text-left py-3 px-4">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="py-8 text-center text-gray-500">
-                    No users found. Create your first user!
+                    {t('noUsersFound')}
                   </td>
                 </tr>
               ) : (
@@ -195,7 +197,7 @@ const Admin = () => {
                     <td className="py-3 px-4">
                       <div className="font-medium">{u.full_name}</div>
                       {u.id === user.id && (
-                        <span className="text-xs text-blue-600">(You)</span>
+                        <span className="text-xs text-blue-600">({t('you')})</span>
                       )}
                     </td>
                     <td className="py-3 px-4">{u.email}</td>
@@ -206,9 +208,9 @@ const Admin = () => {
                         className={`px-2 py-1 rounded-full text-xs ${getRoleBadge(u.role)} border-0 cursor-pointer`}
                         disabled={u.id === user.id}
                       >
-                        <option value="admin">🔐 Admin</option>
-                        <option value="user">👤 User</option>
-                        <option value="sales">💼 Sales</option>
+                        <option value="admin">🔐 {t('admin')}</option>
+                        <option value="user">👤 {t('user')}</option>
+                        <option value="sales">💼 {t('sales')}</option>
                       </select>
                     </td>
                     <td className="py-3 px-4">
@@ -220,14 +222,14 @@ const Admin = () => {
                           onClick={() => openModal(u)}
                           className="text-blue-600 hover:text-blue-800"
                         >
-                          Edit
+                          {t('edit')}
                         </button>
                         {u.id !== user.id && (
                           <button
                             onClick={() => handleDelete(u.id)}
                             className="text-red-600 hover:text-red-800"
                           >
-                            Delete
+                            {t('delete')}
                           </button>
                         )}
                       </div>
@@ -242,16 +244,16 @@ const Admin = () => {
 
       {/* Role Descriptions */}
       <div className="card bg-blue-50">
-        <h3 className="font-semibold mb-3">Role Descriptions</h3>
+        <h3 className="font-semibold mb-3">{t('roleDescriptions')}</h3>
         <div className="space-y-2 text-sm">
           <div>
-            <span className="font-medium">🔐 Admin:</span> Full access to all features, user management, and system settings
+            <span className="font-medium">🔐 {t('admin')}:</span> {t('adminRoleDesc')}
           </div>
           <div>
-            <span className="font-medium">👤 User:</span> Standard access to CRM features, can manage their own data
+            <span className="font-medium">👤 {t('user')}:</span> {t('userRoleDesc')}
           </div>
           <div>
-            <span className="font-medium">💼 Sales:</span> Sales-focused access, can manage leads, opportunities, and customers
+            <span className="font-medium">💼 {t('sales')}:</span> {t('salesRoleDesc')}
           </div>
         </div>
       </div>
@@ -261,12 +263,12 @@ const Admin = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-md w-full">
             <h2 className="text-2xl font-bold mb-6">
-              {editingUser ? 'Edit User' : 'Create New User'}
+              {editingUser ? t('editUser') : t('createUser')}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
+                  {t('fullName')} *
                 </label>
                 <input
                   type="text"
@@ -275,13 +277,13 @@ const Admin = () => {
                   onChange={handleChange}
                   className="input-field"
                   required
-                  placeholder="John Doe"
+                  placeholder={t('placeholderFullName')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
+                  {t('email')} *
                 </label>
                 <input
                   type="email"
@@ -290,13 +292,13 @@ const Admin = () => {
                   onChange={handleChange}
                   className="input-field"
                   required
-                  placeholder="john@example.com"
+                  placeholder={t('placeholderEmail')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password {editingUser && '(leave blank to keep current)'}
+                  {t('password')} {editingUser && `(${t('leaveBlankToKeepCurrent')})`}
                 </label>
                 <input
                   type="password"
@@ -305,17 +307,17 @@ const Admin = () => {
                   onChange={handleChange}
                   className="input-field"
                   required={!editingUser}
-                  placeholder={editingUser ? 'Leave blank to keep current' : 'Enter password'}
+                  placeholder={editingUser ? t('leaveBlankToKeepCurrent') : t('enterPassword')}
                   minLength={6}
                 />
                 {!editingUser && (
-                  <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('min6Characters')}</p>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Role *
+                  {t('role')} *
                 </label>
                 <select
                   name="role"
@@ -324,25 +326,25 @@ const Admin = () => {
                   className="input-field"
                   required
                 >
-                  <option value="user">👤 User</option>
-                  <option value="sales">💼 Sales</option>
-                  <option value="admin">🔐 Admin</option>
+                  <option value="user">👤 {t('user')}</option>
+                  <option value="sales">💼 {t('sales')}</option>
+                  <option value="admin">🔐 {t('admin')}</option>
                 </select>
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
                 <p className="text-yellow-800">
-                  <strong>Note:</strong> The new user will be able to login with the email and password provided.
-                  {editingUser && ' Leaving password blank will keep their current password.'}
+                  {t('createUserNote')}
+                  {editingUser && ` ${t('passwordBlankKeepsCurrent')}`}
                 </p>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
                 <button type="button" onClick={closeModal} className="btn-secondary">
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  {editingUser ? 'Update' : 'Create'} User
+                  {editingUser ? t('update') : t('create')} {t('user')}
                 </button>
               </div>
             </form>

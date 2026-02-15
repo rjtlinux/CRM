@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { costsAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { formatIndianCurrency } from '../utils/indianFormatters';
 
 const Costs = () => {
+  const { t } = useLanguage();
   const [costs, setCosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -44,19 +47,19 @@ const Costs = () => {
       closeModal();
     } catch (error) {
       console.error('Error saving cost:', error);
-      alert('Failed to save cost');
+      alert(t('failedToSaveCost'));
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this cost?')) return;
+    if (!window.confirm(t('confirmDeleteCost'))) return;
     
     try {
       await costsAPI.delete(id);
       fetchCosts();
     } catch (error) {
       console.error('Error deleting cost:', error);
-      alert('Failed to delete cost');
+      alert(t('failedToDeleteCost'));
     }
   };
 
@@ -103,32 +106,39 @@ const Costs = () => {
   const paidCosts = costs.filter(c => c.payment_status === 'paid').reduce((sum, cost) => sum + parseFloat(cost.amount), 0);
   const pendingCosts = costs.filter(c => c.payment_status === 'pending').reduce((sum, cost) => sum + parseFloat(cost.amount), 0);
 
+  const getCategoryLabel = (cat) => {
+    const keys = { Software: 'categorySoftware', Marketing: 'categoryMarketing', Operations: 'categoryOperations', Salaries: 'categorySalaries', Utilities: 'categoryUtilities', Office: 'categoryOffice', Travel: 'categoryTravel', Other: 'categoryOther' };
+    return t(keys[cat] || cat);
+  };
+
+  const getPaymentStatusLabel = (status) => status === 'paid' ? t('paid') : t('pending');
+
   if (loading) {
-    return <div className="text-center py-8">Loading costs...</div>;
+    return <div className="text-center py-8">{t('loadingCosts')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Costs & Expenses</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{t('costsAndExpenses')}</h1>
         <button onClick={() => openModal()} className="btn-primary">
-          + Add Cost
+          + {t('addCost')}
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-6">
         <div className="card bg-red-50">
-          <div className="text-sm text-gray-600">Total Costs</div>
-          <div className="text-2xl font-bold text-red-600">${totalCosts.toLocaleString()}</div>
+          <div className="text-sm text-gray-600">{t('totalCosts')}</div>
+          <div className="text-2xl font-bold text-red-600">{formatIndianCurrency(totalCosts)}</div>
         </div>
         <div className="card bg-green-50">
-          <div className="text-sm text-gray-600">Paid</div>
-          <div className="text-2xl font-bold text-green-600">${paidCosts.toLocaleString()}</div>
+          <div className="text-sm text-gray-600">{t('paid')}</div>
+          <div className="text-2xl font-bold text-green-600">{formatIndianCurrency(paidCosts)}</div>
         </div>
         <div className="card bg-yellow-50">
-          <div className="text-sm text-gray-600">Pending</div>
-          <div className="text-2xl font-bold text-yellow-600">${pendingCosts.toLocaleString()}</div>
+          <div className="text-sm text-gray-600">{t('pending')}</div>
+          <div className="text-2xl font-bold text-yellow-600">{formatIndianCurrency(pendingCosts)}</div>
         </div>
       </div>
 
@@ -137,13 +147,13 @@ const Costs = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-3 px-4">Date</th>
-                <th className="text-left py-3 px-4">Category</th>
-                <th className="text-left py-3 px-4">Description</th>
-                <th className="text-left py-3 px-4">Vendor</th>
-                <th className="text-left py-3 px-4">Amount</th>
-                <th className="text-left py-3 px-4">Status</th>
-                <th className="text-left py-3 px-4">Actions</th>
+                <th className="text-left py-3 px-4">{t('date')}</th>
+                <th className="text-left py-3 px-4">{t('category')}</th>
+                <th className="text-left py-3 px-4">{t('description')}</th>
+                <th className="text-left py-3 px-4">{t('vendor')}</th>
+                <th className="text-left py-3 px-4">{t('amount')}</th>
+                <th className="text-left py-3 px-4">{t('status')}</th>
+                <th className="text-left py-3 px-4">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -152,19 +162,19 @@ const Costs = () => {
                   <td className="py-3 px-4">{new Date(cost.cost_date).toLocaleDateString()}</td>
                   <td className="py-3 px-4">
                     <span className="px-2 py-1 bg-gray-100 rounded text-sm">
-                      {cost.category}
+                      {getCategoryLabel(cost.category)}
                     </span>
                   </td>
                   <td className="py-3 px-4">{cost.description}</td>
                   <td className="py-3 px-4">{cost.vendor || '-'}</td>
                   <td className="py-3 px-4 font-bold text-red-600">
-                    ${parseFloat(cost.amount).toLocaleString()}
+                    {formatIndianCurrency(parseFloat(cost.amount))}
                   </td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       cost.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {cost.payment_status}
+                      {getPaymentStatusLabel(cost.payment_status)}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -172,13 +182,13 @@ const Costs = () => {
                       onClick={() => openModal(cost)}
                       className="text-blue-600 hover:text-blue-800 mr-3"
                     >
-                      Edit
+                      {t('edit')}
                     </button>
                     <button
                       onClick={() => handleDelete(cost.id)}
                       className="text-red-600 hover:text-red-800"
                     >
-                      Delete
+                      {t('delete')}
                     </button>
                   </td>
                 </tr>
@@ -193,13 +203,13 @@ const Costs = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6">
-              {editingCost ? 'Edit Cost' : 'Add New Cost'}
+              {editingCost ? t('editCost') : t('addNewCost')}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category *
+                    {t('category')} *
                   </label>
                   <select
                     name="category"
@@ -208,20 +218,20 @@ const Costs = () => {
                     className="input-field"
                     required
                   >
-                    <option value="">Select Category</option>
-                    <option value="Software">Software</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Operations">Operations</option>
-                    <option value="Salaries">Salaries</option>
-                    <option value="Utilities">Utilities</option>
-                    <option value="Office">Office</option>
-                    <option value="Travel">Travel</option>
-                    <option value="Other">Other</option>
+                    <option value="">{t('selectCategory')}</option>
+                    <option value="Software">{t('categorySoftware')}</option>
+                    <option value="Marketing">{t('categoryMarketing')}</option>
+                    <option value="Operations">{t('categoryOperations')}</option>
+                    <option value="Salaries">{t('categorySalaries')}</option>
+                    <option value="Utilities">{t('categoryUtilities')}</option>
+                    <option value="Office">{t('categoryOffice')}</option>
+                    <option value="Travel">{t('categoryTravel')}</option>
+                    <option value="Other">{t('categoryOther')}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date *
+                    {t('date')} *
                   </label>
                   <input
                     type="date"
@@ -236,7 +246,7 @@ const Costs = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description *
+                  {t('description')} *
                 </label>
                 <textarea
                   name="description"
@@ -251,7 +261,7 @@ const Costs = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Amount *
+                    {t('amount')} *
                   </label>
                   <input
                     type="number"
@@ -266,7 +276,7 @@ const Costs = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Vendor
+                    {t('vendor')}
                   </label>
                   <input
                     type="text"
@@ -281,7 +291,7 @@ const Costs = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Status
+                    {t('paymentStatus')}
                   </label>
                   <select
                     name="payment_status"
@@ -289,13 +299,13 @@ const Costs = () => {
                     onChange={handleChange}
                     className="input-field"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
+                    <option value="pending">{t('pending')}</option>
+                    <option value="paid">{t('paid')}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Receipt Number
+                    {t('receiptNumber')}
                   </label>
                   <input
                     type="text"
@@ -309,10 +319,10 @@ const Costs = () => {
 
               <div className="flex justify-end gap-3 mt-6">
                 <button type="button" onClick={closeModal} className="btn-secondary">
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  {editingCost ? 'Update' : 'Create'} Cost
+                  {editingCost ? t('update') : t('create')} {t('cost')}
                 </button>
               </div>
             </form>

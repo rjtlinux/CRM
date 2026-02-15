@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { followupsAPI, opportunitiesAPI, leadsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const Followups = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [followups, setFollowups] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -76,19 +78,19 @@ const Followups = () => {
       closeModal();
     } catch (error) {
       console.error('Error saving follow-up:', error);
-      alert('Failed to save follow-up');
+      alert(t('failedToSaveFollowup'));
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this follow-up?')) return;
+    if (!window.confirm(t('confirmDeleteFollowup'))) return;
     
     try {
       await followupsAPI.delete(id);
       fetchData();
     } catch (error) {
       console.error('Error deleting follow-up:', error);
-      alert('Failed to delete follow-up');
+      alert(t('failedToDeleteFollowup'));
     }
   };
 
@@ -98,7 +100,7 @@ const Followups = () => {
       fetchData();
     } catch (error) {
       console.error('Error completing follow-up:', error);
-      alert('Failed to complete follow-up');
+      alert(t('failedToCompleteFollowup'));
     }
   };
 
@@ -174,15 +176,15 @@ const Followups = () => {
   const completedCount = followups.filter(f => f.status === 'completed').length;
 
   if (loading) {
-    return <div className="text-center py-8">Loading follow-ups...</div>;
+    return <div className="text-center py-8">{t('loadingFollowups')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Follow-ups & Future Planning</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{t('followups')}</h1>
         <button onClick={() => openModal()} className="btn-primary">
-          + Schedule Follow-up
+          + {t('scheduleFollowup')}
         </button>
       </div>
 
@@ -192,25 +194,25 @@ const Followups = () => {
           className={`card cursor-pointer hover:shadow-lg transition-shadow ${filter === 'missed' ? 'bg-red-50 border-2 border-red-500' : 'bg-red-50'}`}
           onClick={() => setFilter('missed')}
         >
-          <div className="text-sm text-gray-600">Missed</div>
+          <div className="text-sm text-gray-600">{t('missed')}</div>
           <div className="text-2xl font-bold text-red-600">{missedCount}</div>
         </div>
         <div 
           className={`card cursor-pointer hover:shadow-lg transition-shadow ${filter === 'upcoming' ? 'bg-blue-50 border-2 border-blue-500' : 'bg-blue-50'}`}
           onClick={() => setFilter('upcoming')}
         >
-          <div className="text-sm text-gray-600">Upcoming</div>
+          <div className="text-sm text-gray-600">{t('upcoming')}</div>
           <div className="text-2xl font-bold text-blue-600">{upcomingCount}</div>
         </div>
         <div 
           className={`card cursor-pointer hover:shadow-lg transition-shadow ${filter === 'all' ? 'bg-gray-50 border-2 border-gray-500' : 'bg-gray-50'}`}
           onClick={() => setFilter('all')}
         >
-          <div className="text-sm text-gray-600">Total</div>
+          <div className="text-sm text-gray-600">{t('total')}</div>
           <div className="text-2xl font-bold text-gray-600">{followups.length}</div>
         </div>
         <div className="card bg-green-50">
-          <div className="text-sm text-gray-600">Completed</div>
+          <div className="text-sm text-gray-600">{t('completed')}</div>
           <div className="text-2xl font-bold text-green-600">{completedCount}</div>
         </div>
       </div>
@@ -221,20 +223,20 @@ const Followups = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-3 px-4">Type</th>
-                <th className="text-left py-3 px-4">Related To</th>
-                <th className="text-left py-3 px-4">Assigned To</th>
-                <th className="text-left py-3 px-4">Follow-up Date</th>
-                <th className="text-left py-3 px-4">Status</th>
-                <th className="text-left py-3 px-4">Notes</th>
-                <th className="text-left py-3 px-4">Actions</th>
+                <th className="text-left py-3 px-4">{t('type')}</th>
+                <th className="text-left py-3 px-4">{t('relatedTo')}</th>
+                <th className="text-left py-3 px-4">{t('assignedTo')}</th>
+                <th className="text-left py-3 px-4">{t('followupDate')}</th>
+                <th className="text-left py-3 px-4">{t('status')}</th>
+                <th className="text-left py-3 px-4">{t('notes')}</th>
+                <th className="text-left py-3 px-4">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {followups.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="py-8 text-center text-gray-500">
-                    No follow-ups found. Schedule your first follow-up!
+                    {t('noFollowupsFound')}
                   </td>
                 </tr>
               ) : (
@@ -250,13 +252,13 @@ const Followups = () => {
                       <td className="py-3 px-4">
                         <span className="flex items-center gap-2">
                           <span className="text-2xl">{getFollowupTypeIcon(followup.followup_type)}</span>
-                          <span className="capitalize">{followup.followup_type}</span>
+                          <span className="capitalize">{t(followup.followup_type)}</span>
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div>
                           <div className="font-medium">{followup.related_to_name}</div>
-                          <div className="text-xs text-gray-500 capitalize">{followup.related_type}</div>
+                          <div className="text-xs text-gray-500 capitalize">{t(followup.related_type)}</div>
                         </div>
                       </td>
                       <td className="py-3 px-4">{followup.assigned_to_name}</td>
@@ -270,7 +272,7 @@ const Followups = () => {
                       </td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(followup.status)}`}>
-                          {isMissed ? 'MISSED' : followup.status}
+                          {isMissed ? t('missed').toUpperCase() : t(followup.status)}
                         </span>
                       </td>
                       <td className="py-3 px-4 max-w-xs truncate">
@@ -283,20 +285,20 @@ const Followups = () => {
                               onClick={() => handleComplete(followup)}
                               className="text-green-600 hover:text-green-800 text-sm"
                             >
-                              ✓ Complete
+                              ✓ {t('complete')}
                             </button>
                           )}
                           <button
                             onClick={() => openModal(followup)}
                             className="text-blue-600 hover:text-blue-800"
                           >
-                            Edit
+                            {t('edit')}
                           </button>
                           <button
                             onClick={() => handleDelete(followup.id)}
                             className="text-red-600 hover:text-red-800"
                           >
-                            Delete
+                            {t('delete')}
                           </button>
                         </div>
                       </td>
@@ -314,14 +316,14 @@ const Followups = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6">
-              {editingFollowup ? 'Edit Follow-up' : 'Schedule New Follow-up'}
+              {editingFollowup ? t('editFollowup') : t('scheduleNewFollowup')}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Related To */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Related To *
+                    {t('relatedTo')} *
                   </label>
                   <select
                     name="related_to"
@@ -330,14 +332,14 @@ const Followups = () => {
                     className="input-field"
                     required
                   >
-                    <option value="opportunity">Opportunity</option>
-                    <option value="lead">Lead</option>
+                    <option value="opportunity">{t('opportunity')}</option>
+                    <option value="lead">{t('lead')}</option>
                   </select>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {formData.related_to === 'opportunity' ? 'Opportunity' : 'Lead'} *
+                    {formData.related_to === 'opportunity' ? t('opportunity') : t('lead')} *
                   </label>
                   {formData.related_to === 'opportunity' ? (
                     <select
@@ -347,7 +349,7 @@ const Followups = () => {
                       className="input-field"
                       required
                     >
-                      <option value="">Select Opportunity</option>
+                      <option value="">{t('selectOpportunity')}</option>
                       {opportunities.map((opp) => (
                         <option key={opp.id} value={opp.id}>
                           {opp.title} - {opp.customer_name}
@@ -362,7 +364,7 @@ const Followups = () => {
                       className="input-field"
                       required
                     >
-                      <option value="">Select Lead</option>
+                      <option value="">{t('selectLead')}</option>
                       {leads.map((lead) => (
                         <option key={lead.id} value={lead.id}>
                           {lead.name} - {lead.company}
@@ -377,7 +379,7 @@ const Followups = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assigned To *
+                    {t('assignedTo')} *
                   </label>
                   <select
                     name="assigned_to"
@@ -386,7 +388,7 @@ const Followups = () => {
                     className="input-field"
                     required
                   >
-                    <option value="">Select User</option>
+                    <option value="">{t('selectUser')}</option>
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.full_name}
@@ -397,7 +399,7 @@ const Followups = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Follow-up Date & Time *
+                    {t('followupDateTime')} *
                   </label>
                   <input
                     type="datetime-local"
@@ -413,7 +415,7 @@ const Followups = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Follow-up Type *
+                    {t('followupType')} *
                   </label>
                   <select
                     name="followup_type"
@@ -422,17 +424,17 @@ const Followups = () => {
                     className="input-field"
                     required
                   >
-                    <option value="call">📞 Call</option>
-                    <option value="email">📧 Email</option>
-                    <option value="meeting">🤝 Meeting</option>
-                    <option value="demo">💻 Demo</option>
-                    <option value="followup">🔄 Follow-up</option>
+                    <option value="call">📞 {t('call')}</option>
+                    <option value="email">📧 {t('email')}</option>
+                    <option value="meeting">🤝 {t('meeting')}</option>
+                    <option value="demo">💻 {t('demo')}</option>
+                    <option value="followup">🔄 {t('followup')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
+                    {t('status')}
                   </label>
                   <select
                     name="status"
@@ -440,17 +442,17 @@ const Followups = () => {
                     onChange={handleChange}
                     className="input-field"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="missed">Missed</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="pending">{t('pending')}</option>
+                    <option value="completed">{t('completed')}</option>
+                    <option value="missed">{t('missed')}</option>
+                    <option value="cancelled">{t('cancelled')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes
+                  {t('notes')}
                 </label>
                 <textarea
                   name="notes"
@@ -458,16 +460,16 @@ const Followups = () => {
                   onChange={handleChange}
                   className="input-field"
                   rows="4"
-                  placeholder="Add notes about this follow-up..."
+                  placeholder={t('followupNotesPlaceholder')}
                 />
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
                 <button type="button" onClick={closeModal} className="btn-secondary">
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  {editingFollowup ? 'Update' : 'Schedule'} Follow-up
+                  {editingFollowup ? t('updateFollowup') : t('scheduleFollowup')}
                 </button>
               </div>
             </form>

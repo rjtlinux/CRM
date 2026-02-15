@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { opportunitiesAPI, customersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { formatIndianCurrency } from '../utils/indianFormatters';
 
 const Opportunities = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [opportunities, setOpportunities] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -34,42 +37,52 @@ const Opportunities = () => {
     status: 'active',
   });
 
-  const sectors = [
-    'Manufacturing',
-    'Finance',
-    'IT',
-    'Sales',
-    'Supply Chain',
-    'Law Firm',
-    'Healthcare',
-    'Education',
-    'Retail',
-    'Technology',
-    'Construction',
-    'Real Estate',
-    'Hospitality',
-    'Transportation',
-    'Other'
-  ];
-
   const businessTypes = [
-    { value: 'new', label: 'New Business' },
-    { value: 'old', label: 'Old Business' }
+    { value: 'new', labelKey: 'newBusiness' },
+    { value: 'old', labelKey: 'oldBusiness' }
   ];
 
   const generationModes = [
-    { value: 'cold_call', label: 'Cold Call' },
-    { value: 'web_enquiry', label: 'Web Enquiry' },
-    { value: 'exhibition', label: 'Exhibition' },
-    { value: 'reference', label: 'Reference' }
+    { value: 'cold_call', labelKey: 'coldCall' },
+    { value: 'web_enquiry', labelKey: 'webEnquiry' },
+    { value: 'exhibition', labelKey: 'exhibition' },
+    { value: 'reference', labelKey: 'reference' }
   ];
 
   const companySizes = [
-    { value: 'micro', label: 'Micro (1-10 employees)' },
-    { value: 'small', label: 'Small (11-50 employees)' },
-    { value: 'medium', label: 'Medium (51-250 employees)' },
-    { value: 'large', label: 'Large (251-1000 employees)' },
-    { value: 'enterprise', label: 'Enterprise (1000+ employees)' }
+    { value: 'micro', labelKey: 'companySizeMicro' },
+    { value: 'small', labelKey: 'companySizeSmall' },
+    { value: 'medium', labelKey: 'companySizeMedium' },
+    { value: 'large', labelKey: 'companySizeLarge' },
+    { value: 'enterprise', labelKey: 'companySizeEnterprise' }
+  ];
+
+  const sectorOptions = [
+    { value: 'Manufacturing', labelKey: 'sectorManufacturing' },
+    { value: 'Finance', labelKey: 'sectorFinance' },
+    { value: 'IT', labelKey: 'sectorIT' },
+    { value: 'Sales', labelKey: 'sectorSales' },
+    { value: 'Supply Chain', labelKey: 'sectorSupplyChain' },
+    { value: 'Law Firm', labelKey: 'sectorLawFirm' },
+    { value: 'Healthcare', labelKey: 'sectorHealthcare' },
+    { value: 'Education', labelKey: 'sectorEducation' },
+    { value: 'Retail', labelKey: 'sectorRetail' },
+    { value: 'Technology', labelKey: 'sectorTechnology' },
+    { value: 'Construction', labelKey: 'sectorConstruction' },
+    { value: 'Real Estate', labelKey: 'sectorRealEstate' },
+    { value: 'Hospitality', labelKey: 'sectorHospitality' },
+    { value: 'Transportation', labelKey: 'sectorTransportation' },
+    { value: 'Other', labelKey: 'sectorOther' }
+  ];
+
+  const sourceOptions = [
+    { value: 'website', labelKey: 'website' },
+    { value: 'referral', labelKey: 'referral' },
+    { value: 'cold_call', labelKey: 'coldCall' },
+    { value: 'conference', labelKey: 'conference' },
+    { value: 'linkedin', labelKey: 'linkedin' },
+    { value: 'inbound', labelKey: 'inbound' },
+    { value: 'existing_customer', labelKey: 'existingCustomer' }
   ];
   
   const [formData, setFormData] = useState({
@@ -85,12 +98,12 @@ const Opportunities = () => {
   });
 
   const pipelineStages = [
-    { key: 'lead', label: 'Lead', color: 'bg-gray-100 text-gray-800', icon: '🎯' },
-    { key: 'qualified', label: 'Qualified', color: 'bg-blue-100 text-blue-800', icon: '✓' },
-    { key: 'proposal', label: 'Proposal', color: 'bg-yellow-100 text-yellow-800', icon: '📄' },
-    { key: 'negotiation', label: 'Negotiation', color: 'bg-orange-100 text-orange-800', icon: '💬' },
-    { key: 'closed_won', label: 'Closed Won', color: 'bg-green-100 text-green-800', icon: '🎉' },
-    { key: 'closed_lost', label: 'Closed Lost', color: 'bg-red-100 text-red-800', icon: '❌' },
+    { key: 'lead', labelKey: 'lead', color: 'bg-gray-100 text-gray-800', icon: '🎯' },
+    { key: 'qualified', labelKey: 'qualified', color: 'bg-blue-100 text-blue-800', icon: '✓' },
+    { key: 'proposal', labelKey: 'proposal', color: 'bg-yellow-100 text-yellow-800', icon: '📄' },
+    { key: 'negotiation', labelKey: 'negotiation', color: 'bg-orange-100 text-orange-800', icon: '💬' },
+    { key: 'closed_won', labelKey: 'closedWon', color: 'bg-green-100 text-green-800', icon: '🎉' },
+    { key: 'closed_lost', labelKey: 'closedLost', color: 'bg-red-100 text-red-800', icon: '❌' },
   ];
 
   useEffect(() => {
@@ -125,7 +138,7 @@ const Opportunities = () => {
       closeModal();
     } catch (error) {
       console.error('Error saving opportunity:', error);
-      alert('Failed to save opportunity');
+      alert(t('failedToSaveOpportunity'));
     }
   };
 
@@ -227,10 +240,10 @@ const Opportunities = () => {
         status: 'active',
       });
       
-      alert('Customer created successfully!');
+      alert(t('customerCreatedSuccess'));
     } catch (error) {
       console.error('Error creating customer:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to create customer';
+      const errorMessage = error.response?.data?.error || t('failedToCreateCustomer');
       alert(errorMessage);
     }
   };
@@ -262,7 +275,7 @@ const Opportunities = () => {
     : opportunities.filter(opp => opp.pipeline_stage === selectedStage);
 
   if (loading) {
-    return <div className="text-center py-8">Loading opportunities...</div>;
+    return <div className="text-center py-8">{t('loadingOpportunities')}</div>;
   }
 
   return (
@@ -270,18 +283,18 @@ const Opportunities = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Opportunities Pipeline</h1>
-          <p className="text-gray-600 mt-1">Manage your sales opportunities and deals</p>
+          <h1 className="text-3xl font-bold text-gray-800">{t('opportunitiesPipeline')}</h1>
+          <p className="text-gray-600 mt-1">{t('manageOpportunitiesSubtitle')}</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => setViewMode(viewMode === 'pipeline' ? 'list' : 'pipeline')}
             className="btn-secondary"
           >
-            {viewMode === 'pipeline' ? '📋 List View' : '📊 Pipeline View'}
+            {viewMode === 'pipeline' ? `📋 ${t('listView')}` : `📊 ${t('pipelineView')}`}
           </button>
           <button onClick={() => openModal()} className="btn-primary">
-            + Add Opportunity
+            + {t('addOpportunity')}
           </button>
         </div>
       </div>
@@ -289,23 +302,23 @@ const Opportunities = () => {
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card bg-blue-50">
-          <div className="text-sm text-gray-600">Total Opportunities</div>
+          <div className="text-sm text-gray-600">{t('totalOpportunities')}</div>
           <div className="text-2xl font-bold text-blue-600">{opportunities.length}</div>
         </div>
         <div className="card bg-green-50">
-          <div className="text-sm text-gray-600">Total Value</div>
+          <div className="text-sm text-gray-600">{t('totalValue')}</div>
           <div className="text-2xl font-bold text-green-600">
-            ${opportunities.reduce((sum, o) => sum + parseFloat(o.value || 0), 0).toLocaleString()}
+            {formatIndianCurrency(opportunities.reduce((sum, o) => sum + parseFloat(o.value || 0), 0))}
           </div>
         </div>
         <div className="card bg-purple-50">
-          <div className="text-sm text-gray-600">Weighted Value</div>
+          <div className="text-sm text-gray-600">{t('weightedValue')}</div>
           <div className="text-2xl font-bold text-purple-600">
-            ${opportunities.reduce((sum, o) => sum + (parseFloat(o.value || 0) * (o.closing_probability / 100)), 0).toLocaleString()}
+            {formatIndianCurrency(opportunities.reduce((sum, o) => sum + (parseFloat(o.value || 0) * (o.closing_probability / 100)), 0))}
           </div>
         </div>
         <div className="card bg-orange-50">
-          <div className="text-sm text-gray-600">Avg Probability</div>
+          <div className="text-sm text-gray-600">{t('avgProbability')}</div>
           <div className="text-2xl font-bold text-orange-600">
             {opportunities.length > 0 
               ? Math.round(opportunities.reduce((sum, o) => sum + o.closing_probability, 0) / opportunities.length)
@@ -325,9 +338,9 @@ const Opportunities = () => {
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{stage.icon}</span>
                       <div>
-                        <h3 className="font-bold text-gray-800">{stage.label}</h3>
+                        <h3 className="font-bold text-gray-800">{t(stage.labelKey)}</h3>
                         <p className="text-xs text-gray-500">
-                          {getOpportunitiesByStage(stage.key).length} deals • ${getTotalValueByStage(stage.key).toLocaleString()}
+                          {getOpportunitiesByStage(stage.key).length} {t('deals')} • {formatIndianCurrency(getTotalValueByStage(stage.key))}
                         </p>
                       </div>
                     </div>
@@ -344,13 +357,13 @@ const Opportunities = () => {
                         <p className="text-sm text-gray-600 mb-2">{opp.customer_name}</p>
                         <div className="flex justify-between items-center text-sm">
                           <span className="font-bold text-green-600">
-                            ${parseFloat(opp.value).toLocaleString()}
+                            {formatIndianCurrency(parseFloat(opp.value))}
                           </span>
                           <span className="text-gray-500">{opp.closing_probability}%</span>
                         </div>
                         {opp.expected_close_date && (
                           <div className="text-xs text-gray-500 mt-2">
-                            Due: {new Date(opp.expected_close_date).toLocaleDateString()}
+                            {t('due')}: {new Date(opp.expected_close_date).toLocaleDateString()}
                           </div>
                         )}
                         {opp.assigned_to_name && (
@@ -378,15 +391,15 @@ const Opportunities = () => {
       {viewMode === 'list' && (
         <div className="card">
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Stage:</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('filterByStage')}</label>
             <select
               value={selectedStage}
               onChange={(e) => setSelectedStage(e.target.value)}
               className="input-field w-64"
             >
-              <option value="all">All Stages</option>
+              <option value="all">{t('allStages')}</option>
               {pipelineStages.map((stage) => (
-                <option key={stage.key} value={stage.key}>{stage.label}</option>
+                <option key={stage.key} value={stage.key}>{t(stage.labelKey)}</option>
               ))}
             </select>
           </div>
@@ -395,14 +408,14 @@ const Opportunities = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">Title</th>
-                  <th className="text-left py-3 px-4">Customer</th>
-                  <th className="text-left py-3 px-4">Value</th>
-                  <th className="text-left py-3 px-4">Stage</th>
-                  <th className="text-left py-3 px-4">Probability</th>
-                  <th className="text-left py-3 px-4">Close Date</th>
-                  <th className="text-left py-3 px-4">Assigned To</th>
-                  <th className="text-left py-3 px-4">Actions</th>
+                  <th className="text-left py-3 px-4">{t('title')}</th>
+                  <th className="text-left py-3 px-4">{t('customer')}</th>
+                  <th className="text-left py-3 px-4">{t('value')}</th>
+                  <th className="text-left py-3 px-4">{t('stage')}</th>
+                  <th className="text-left py-3 px-4">{t('probability')}</th>
+                  <th className="text-left py-3 px-4">{t('closeDate')}</th>
+                  <th className="text-left py-3 px-4">{t('assignedTo')}</th>
+                  <th className="text-left py-3 px-4">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -415,13 +428,13 @@ const Opportunities = () => {
                     <td className="py-3 px-4 font-medium text-blue-600 hover:text-blue-800">{opp.title}</td>
                     <td className="py-3 px-4">{opp.customer_name}</td>
                     <td className="py-3 px-4 font-bold text-green-600">
-                      ${parseFloat(opp.value).toLocaleString()}
+                      {formatIndianCurrency(parseFloat(opp.value))}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         pipelineStages.find(s => s.key === opp.pipeline_stage)?.color
                       }`}>
-                        {pipelineStages.find(s => s.key === opp.pipeline_stage)?.label}
+                        {t(pipelineStages.find(s => s.key === opp.pipeline_stage)?.labelKey)}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -444,13 +457,13 @@ const Opportunities = () => {
                         onClick={() => openModal(opp)}
                         className="text-blue-600 hover:text-blue-800 mr-3"
                       >
-                        Edit
+                        {t('edit')}
                       </button>
                       <button
                         onClick={() => handleDelete(opp.id)}
                         className="text-red-600 hover:text-red-800"
                       >
-                        Delete
+                        {t('delete')}
                       </button>
                     </td>
                   </tr>
@@ -467,7 +480,7 @@ const Opportunities = () => {
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">
               <h2 className="text-2xl font-bold">
-                {editingOpportunity ? 'Edit Opportunity' : 'Add New Opportunity'}
+                {editingOpportunity ? t('editOpportunity') : t('addNewOpportunity')}
               </h2>
             </div>
             
@@ -476,19 +489,19 @@ const Opportunities = () => {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      Customer *
+                      {t('customerRequired')}
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowCustomerModal(true)}
                       className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                     >
-                      + Create New Customer
+                      + {t('createNewCustomer')}
                     </button>
                   </div>
                   <input
                     type="text"
-                    placeholder="Search customer..."
+                    placeholder={t('searchCustomer')}
                     value={customerSearch}
                     onChange={(e) => setCustomerSearch(e.target.value)}
                     className="input-field mb-2"
@@ -501,7 +514,7 @@ const Opportunities = () => {
                     size="5"
                     required
                   >
-                    <option value="">Select Customer</option>
+                    <option value="">{t('selectCustomer')}</option>
                     {filteredCustomers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
                         {customer.company_name} {customer.contact_person ? `(${customer.contact_person})` : ''}
@@ -510,14 +523,14 @@ const Opportunities = () => {
                   </select>
                   {filteredCustomers.length === 0 && customerSearch && (
                     <p className="text-sm text-gray-500 mt-1">
-                      No customers found. Click "Create New Customer" above.
+                      {t('noCustomersFoundCreate')}
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Opportunity Title *
+                    {t('opportunityTitle')}
                   </label>
                   <input
                     type="text"
@@ -525,7 +538,7 @@ const Opportunities = () => {
                     value={formData.title}
                     onChange={handleChange}
                     className="input-field"
-                    placeholder="e.g., Enterprise License Deal"
+                    placeholder={t('opportunityTitlePlaceholder')}
                     required
                   />
                 </div>
@@ -533,7 +546,7 @@ const Opportunities = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                  {t('description')}
                 </label>
                 <textarea
                   name="description"
@@ -541,14 +554,14 @@ const Opportunities = () => {
                   onChange={handleChange}
                   className="input-field"
                   rows="3"
-                  placeholder="Describe the opportunity..."
+                  placeholder={t('describeOpportunityPlaceholder')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Deal Value ($) *
+                    {t('dealValue')}
                   </label>
                   <input
                     type="number"
@@ -565,7 +578,7 @@ const Opportunities = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pipeline Stage *
+                    {t('pipelineStage')} *
                   </label>
                   <select
                     name="pipeline_stage"
@@ -575,7 +588,7 @@ const Opportunities = () => {
                   >
                     {pipelineStages.map((stage) => (
                       <option key={stage.key} value={stage.key}>
-                        {stage.icon} {stage.label}
+                        {stage.icon} {t(stage.labelKey)}
                       </option>
                     ))}
                   </select>
@@ -585,7 +598,7 @@ const Opportunities = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Closing Probability (%) *
+                    {t('closingProbabilityPct')}
                   </label>
                   <input
                     type="range"
@@ -604,7 +617,7 @@ const Opportunities = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expected Close Date
+                    {t('expectedCloseDate')}
                   </label>
                   <input
                     type="date"
@@ -619,7 +632,7 @@ const Opportunities = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Lead Source
+                    {t('leadSource')}
                   </label>
                   <select
                     name="source"
@@ -627,23 +640,19 @@ const Opportunities = () => {
                     onChange={handleChange}
                     className="input-field"
                   >
-                    <option value="website">Website</option>
-                    <option value="referral">Referral</option>
-                    <option value="cold_call">Cold Call</option>
-                    <option value="conference">Conference</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="inbound">Inbound</option>
-                    <option value="existing_customer">Existing Customer</option>
+                    {sourceOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assigned To
+                    {t('assignedTo')}
                   </label>
                   <input
                     type="text"
-                    value={user?.full_name || 'Current User'}
+                    value={user?.full_name || t('currentUser')}
                     className="input-field bg-gray-100"
                     disabled
                   />
@@ -653,10 +662,10 @@ const Opportunities = () => {
 
               <div className="flex justify-end gap-3 pt-4">
                 <button type="button" onClick={closeModal} className="btn-secondary">
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  {editingOpportunity ? 'Update' : 'Create'} Opportunity
+                  {editingOpportunity ? t('updateOpportunity') : t('createOpportunity')}
                 </button>
               </div>
             </form>
@@ -669,17 +678,17 @@ const Opportunities = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">
-              <h2 className="text-2xl font-bold">Create New Customer</h2>
+              <h2 className="text-2xl font-bold">{t('createNewCustomer')}</h2>
             </div>
             
             <form onSubmit={handleCreateNewCustomer} className="p-6 space-y-4">
               {/* Company Information */}
               <div className="border-b pb-3 mb-3">
-                <h3 className="text-md font-semibold text-gray-700 mb-2">Company Information</h3>
+                <h3 className="text-md font-semibold text-gray-700 mb-2">{t('companyInformation')}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Name *
+                      {t('companyName')} *
                     </label>
                     <input
                       type="text"
@@ -692,7 +701,7 @@ const Opportunities = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Sector *
+                      {t('sector')} *
                     </label>
                     <select
                       name="sector"
@@ -701,8 +710,8 @@ const Opportunities = () => {
                       className="input-field"
                       required
                     >
-                      {sectors.map((sector) => (
-                        <option key={sector} value={sector}>{sector}</option>
+                      {sectorOptions.map((sector) => (
+                        <option key={sector.value} value={sector.value}>{t(sector.labelKey)}</option>
                       ))}
                     </select>
                   </div>
@@ -711,7 +720,7 @@ const Opportunities = () => {
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Size *
+                      {t('companySize')} *
                     </label>
                     <select
                       name="company_size"
@@ -720,15 +729,15 @@ const Opportunities = () => {
                       className="input-field"
                       required
                     >
-                      <option value="">Select Size</option>
+                      <option value="">{t('selectSize')}</option>
                       {companySizes.map((size) => (
-                        <option key={size.value} value={size.value}>{size.label}</option>
+                        <option key={size.value} value={size.value}>{t(size.labelKey)}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Business Type *
+                      {t('businessType')} *
                     </label>
                     <select
                       name="business_type"
@@ -738,7 +747,7 @@ const Opportunities = () => {
                       required
                     >
                       {businessTypes.map((type) => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
+                        <option key={type.value} value={type.value}>{t(type.labelKey)}</option>
                       ))}
                     </select>
                   </div>
@@ -747,11 +756,11 @@ const Opportunities = () => {
 
               {/* Contact Information */}
               <div className="border-b pb-3 mb-3">
-                <h3 className="text-md font-semibold text-gray-700 mb-2">Contact Information</h3>
+                <h3 className="text-md font-semibold text-gray-700 mb-2">{t('contactInformation')}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contact Person *
+                      {t('contactPerson')} *
                     </label>
                     <input
                       type="text"
@@ -764,7 +773,7 @@ const Opportunities = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Designation *
+                      {t('contactDesignation')} *
                     </label>
                     <input
                       type="text"
@@ -772,7 +781,7 @@ const Opportunities = () => {
                       value={newCustomerData.contact_designation}
                       onChange={handleNewCustomerChange}
                       className="input-field"
-                      placeholder="e.g., CEO, Manager"
+                      placeholder={t('designationPlaceholder')}
                       required
                     />
                   </div>
@@ -781,7 +790,7 @@ const Opportunities = () => {
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email *
+                      {t('email')} *
                     </label>
                     <input
                       type="email"
@@ -794,7 +803,7 @@ const Opportunities = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone *
+                      {t('phone')} *
                     </label>
                     <input
                       type="tel"
@@ -810,10 +819,10 @@ const Opportunities = () => {
 
               {/* Address Information */}
               <div className="border-b pb-3 mb-3">
-                <h3 className="text-md font-semibold text-gray-700 mb-2">Address</h3>
+                <h3 className="text-md font-semibold text-gray-700 mb-2">{t('addressLabel')}</h3>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address *
+                    {t('address')} *
                   </label>
                   <input
                     type="text"
@@ -828,7 +837,7 @@ const Opportunities = () => {
                 <div className="grid grid-cols-3 gap-3 mt-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City *
+                      {t('city')} *
                     </label>
                     <input
                       type="text"
@@ -841,7 +850,7 @@ const Opportunities = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Pincode *
+                      {t('pincode')} *
                     </label>
                     <input
                       type="text"
@@ -854,7 +863,7 @@ const Opportunities = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Country *
+                      {t('country')} *
                     </label>
                     <input
                       type="text"
@@ -870,10 +879,10 @@ const Opportunities = () => {
 
               {/* Lead Information */}
               <div>
-                <h3 className="text-md font-semibold text-gray-700 mb-2">Lead Information</h3>
+                <h3 className="text-md font-semibold text-gray-700 mb-2">{t('leadInformation')}</h3>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Generation Mode *
+                    {t('generationMode')} *
                   </label>
                   <select
                     name="generation_mode"
@@ -883,7 +892,7 @@ const Opportunities = () => {
                     required
                   >
                     {generationModes.map((mode) => (
-                      <option key={mode.value} value={mode.value}>{mode.label}</option>
+                      <option key={mode.value} value={mode.value}>{t(mode.labelKey)}</option>
                     ))}
                   </select>
                 </div>
@@ -895,10 +904,10 @@ const Opportunities = () => {
                   onClick={() => setShowCustomerModal(false)} 
                   className="btn-secondary"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  Create Customer
+                  {t('createCustomer')}
                 </button>
               </div>
             </form>

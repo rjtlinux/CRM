@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { opportunitiesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { formatIndianCurrency } from '../utils/indianFormatters';
 import axios from 'axios';
 
 const OpportunityTicket = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   
   const [opportunity, setOpportunity] = useState(null);
   const [activities, setActivities] = useState([]);
@@ -31,19 +34,19 @@ const OpportunityTicket = () => {
   });
 
   const priorities = [
-    { value: 'low', label: 'Low', color: 'bg-gray-100 text-gray-800', icon: '⬇️' },
-    { value: 'medium', label: 'Medium', color: 'bg-blue-100 text-blue-800', icon: '➡️' },
-    { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-800', icon: '⬆️' },
-    { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-800', icon: '🔥' }
+    { value: 'low', labelKey: 'low', color: 'bg-gray-100 text-gray-800', icon: '⬇️' },
+    { value: 'medium', labelKey: 'medium', color: 'bg-blue-100 text-blue-800', icon: '➡️' },
+    { value: 'high', labelKey: 'high', color: 'bg-orange-100 text-orange-800', icon: '⬆️' },
+    { value: 'urgent', labelKey: 'urgent', color: 'bg-red-100 text-red-800', icon: '🔥' }
   ];
 
   const pipelineStages = [
-    { key: 'lead', label: 'Lead', color: 'bg-gray-100 text-gray-800' },
-    { key: 'qualified', label: 'Qualified', color: 'bg-blue-100 text-blue-800' },
-    { key: 'proposal', label: 'Proposal', color: 'bg-yellow-100 text-yellow-800' },
-    { key: 'negotiation', label: 'Negotiation', color: 'bg-orange-100 text-orange-800' },
-    { key: 'closed_won', label: 'Closed Won', color: 'bg-green-100 text-green-800' },
-    { key: 'closed_lost', label: 'Closed Lost', color: 'bg-red-100 text-red-800' }
+    { key: 'lead', labelKey: 'lead', color: 'bg-gray-100 text-gray-800' },
+    { key: 'qualified', labelKey: 'qualified', color: 'bg-blue-100 text-blue-800' },
+    { key: 'proposal', labelKey: 'proposal', color: 'bg-yellow-100 text-yellow-800' },
+    { key: 'negotiation', labelKey: 'negotiation', color: 'bg-orange-100 text-orange-800' },
+    { key: 'closed_won', labelKey: 'closedWon', color: 'bg-green-100 text-green-800' },
+    { key: 'closed_lost', labelKey: 'closedLost', color: 'bg-red-100 text-red-800' }
   ];
 
   useEffect(() => {
@@ -109,10 +112,10 @@ const OpportunityTicket = () => {
       await fetchOpportunity();
       await fetchActivities();
       setIsEditing(false);
-      alert('Opportunity updated successfully!');
+      alert(t('opportunityUpdatedSuccessfully'));
     } catch (error) {
       console.error('Error updating opportunity:', error);
-      alert('Failed to update opportunity');
+      alert(t('failedToUpdateOpportunity'));
     }
   };
 
@@ -133,7 +136,7 @@ const OpportunityTicket = () => {
       await fetchActivities();
     } catch (error) {
       console.error('Error adding comment:', error);
-      alert('Failed to add comment');
+      alert(t('failedToAddComment'));
     }
   };
 
@@ -148,22 +151,22 @@ const OpportunityTicket = () => {
 
       switch (action) {
         case 'call':
-          description = 'Made a phone call';
+          description = t('madePhoneCall');
           activityType = 'call';
           updateData.last_contact_date = new Date().toISOString().split('T')[0];
           break;
         case 'email':
-          description = 'Sent an email';
+          description = t('sentEmail');
           activityType = 'email';
           updateData.last_contact_date = new Date().toISOString().split('T')[0];
           break;
         case 'meeting':
-          description = 'Had a meeting';
+          description = t('hadMeeting');
           activityType = 'meeting';
           updateData.last_contact_date = new Date().toISOString().split('T')[0];
           break;
         case 'follow_up':
-          description = 'Scheduled follow-up';
+          description = t('scheduledFollowupDesc');
           activityType = 'follow_up';
           break;
       }
@@ -182,10 +185,10 @@ const OpportunityTicket = () => {
       }
 
       await fetchActivities();
-      alert(`${description} logged successfully!`);
+      alert(t('activityLoggedSuccessfully'));
     } catch (error) {
       console.error('Error logging activity:', error);
-      alert('Failed to log activity');
+      alert(t('failedToLogActivity'));
     }
   };
 
@@ -217,15 +220,18 @@ const OpportunityTicket = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading opportunity...</div>;
+    return <div className="text-center py-8">{t('loadingOpportunity')}</div>;
   }
 
   if (!opportunity) {
-    return <div className="text-center py-8">Opportunity not found</div>;
+    return <div className="text-center py-8">{t('opportunityNotFound')}</div>;
   }
 
   const priorityConfig = priorities.find(p => p.value === (formData.priority || 'medium'));
   const stageConfig = pipelineStages.find(s => s.key === formData.pipeline_stage);
+
+  const getStageLabel = (config) => config ? t(config.labelKey) : '';
+  const getPriorityLabel = (config) => config ? t(config.labelKey) : '';
 
   return (
     <div className="space-y-6">
@@ -236,12 +242,12 @@ const OpportunityTicket = () => {
             onClick={() => navigate('/opportunities')}
             className="text-gray-600 hover:text-gray-800 mt-1"
           >
-            ← Back
+            ← {t('back')}
           </button>
           <div>
             <h1 className="text-3xl font-bold text-gray-800">{opportunity.title}</h1>
             <p className="text-gray-600 mt-1">
-              {opportunity.customer_name} • Created {formatDate(opportunity.created_at)}
+              {opportunity.customer_name} • {t('created')} {formatDate(opportunity.created_at)}
             </p>
           </div>
         </div>
@@ -252,7 +258,7 @@ const OpportunityTicket = () => {
               onClick={() => setIsEditing(true)}
               className="btn-secondary"
             >
-              ✏️ Edit
+              ✏️ {t('edit')}
             </button>
           )}
         </div>
@@ -263,25 +269,25 @@ const OpportunityTicket = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div>
-              <span className="text-sm text-gray-600 block mb-1">Status</span>
+              <span className="text-sm text-gray-600 block mb-1">{t('status')}</span>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${stageConfig?.color}`}>
-                {stageConfig?.label}
+                {getStageLabel(stageConfig)}
               </span>
             </div>
             <div>
-              <span className="text-sm text-gray-600 block mb-1">Priority</span>
+              <span className="text-sm text-gray-600 block mb-1">{t('priority')}</span>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${priorityConfig?.color}`}>
-                {priorityConfig?.icon} {priorityConfig?.label}
+                {priorityConfig?.icon} {getPriorityLabel(priorityConfig)}
               </span>
             </div>
             <div>
-              <span className="text-sm text-gray-600 block mb-1">Value</span>
+              <span className="text-sm text-gray-600 block mb-1">{t('value')}</span>
               <span className="text-lg font-bold text-green-600">
-                ${parseFloat(opportunity.value).toLocaleString()}
+                {formatIndianCurrency(parseFloat(opportunity.value))}
               </span>
             </div>
             <div>
-              <span className="text-sm text-gray-600 block mb-1">Probability</span>
+              <span className="text-sm text-gray-600 block mb-1">{t('probability')}</span>
               <div className="flex items-center gap-2">
                 <div className="w-24 bg-gray-200 rounded-full h-2">
                   <div
@@ -299,30 +305,30 @@ const OpportunityTicket = () => {
             <button
               onClick={() => handleQuickAction('call')}
               className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-              title="Log Call"
+              title={t('logCall')}
             >
-              📞 Call
+              📞 {t('call')}
             </button>
             <button
               onClick={() => handleQuickAction('email')}
               className="px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
-              title="Log Email"
+              title={t('logEmail')}
             >
-              📧 Email
+              📧 {t('email')}
             </button>
             <button
               onClick={() => handleQuickAction('meeting')}
               className="px-3 py-2 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
-              title="Log Meeting"
+              title={t('logMeeting')}
             >
-              👥 Meeting
+              👥 {t('meeting')}
             </button>
             <button
               onClick={() => handleQuickAction('follow_up')}
               className="px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
-              title="Schedule Follow-up"
+              title={t('scheduleFollowupAction')}
             >
-              📅 Follow-up
+              📅 {t('followup')}
             </button>
           </div>
         </div>
@@ -339,7 +345,7 @@ const OpportunityTicket = () => {
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            📋 Overview
+            📋 {t('overview')}
           </button>
           <button
             onClick={() => setActiveTab('activity')}
@@ -349,7 +355,7 @@ const OpportunityTicket = () => {
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            🕒 Activity ({activities.length})
+            🕒 {t('activities')} ({activities.length})
           </button>
           <button
             onClick={() => setActiveTab('comments')}
@@ -359,7 +365,7 @@ const OpportunityTicket = () => {
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            💬 Comments ({comments.length})
+            💬 {t('comments')} ({comments.length})
           </button>
         </div>
       </div>
@@ -370,13 +376,13 @@ const OpportunityTicket = () => {
         <div className="col-span-2 space-y-6">
           {activeTab === 'overview' && (
             <div className="card">
-              <h2 className="text-xl font-bold mb-4">Opportunity Details</h2>
+              <h2 className="text-xl font-bold mb-4">{t('opportunityDetails')}</h2>
               
               {isEditing ? (
                 <form onSubmit={handleUpdate} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Title *
+                      {t('title')} *
                     </label>
                     <input
                       type="text"
@@ -389,7 +395,7 @@ const OpportunityTicket = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description
+                      {t('description')}
                     </label>
                     <textarea
                       value={formData.description}
@@ -402,7 +408,7 @@ const OpportunityTicket = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Deal Value ($) *
+                        {t('dealValue')} *
                       </label>
                       <input
                         type="number"
@@ -415,7 +421,7 @@ const OpportunityTicket = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pipeline Stage *
+                        {t('pipelineStage')} *
                       </label>
                       <select
                         value={formData.pipeline_stage}
@@ -424,7 +430,7 @@ const OpportunityTicket = () => {
                         required
                       >
                         {pipelineStages.map((stage) => (
-                          <option key={stage.key} value={stage.key}>{stage.label}</option>
+                          <option key={stage.key} value={stage.key}>{t(stage.labelKey)}</option>
                         ))}
                       </select>
                     </div>
@@ -433,7 +439,7 @@ const OpportunityTicket = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Priority *
+                        {t('priority')} *
                       </label>
                       <select
                         value={formData.priority}
@@ -442,14 +448,14 @@ const OpportunityTicket = () => {
                         required
                       >
                         {priorities.map((p) => (
-                          <option key={p.value} value={p.value}>{p.icon} {p.label}</option>
+                          <option key={p.value} value={p.value}>{p.icon} {t(p.labelKey)}</option>
                         ))}
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Closing Probability (%)
+                        {t('closingProbabilityPct')}
                       </label>
                       <input
                         type="range"
@@ -469,7 +475,7 @@ const OpportunityTicket = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Next Follow-up Date
+                        {t('nextFollowupDate')}
                       </label>
                       <input
                         type="date"
@@ -481,7 +487,7 @@ const OpportunityTicket = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expected Close Date
+                        {t('expectedCloseDate')}
                       </label>
                       <input
                         type="date"
@@ -494,20 +500,20 @@ const OpportunityTicket = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Internal Notes
+                      {t('internalNotes')}
                     </label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="input-field"
                       rows="3"
-                      placeholder="Internal notes (not visible to customer)"
+                      placeholder={t('internalNotesPlaceholder')}
                     />
                   </div>
 
                   <div className="flex gap-3">
                     <button type="submit" className="btn-primary">
-                      Save Changes
+                      {t('saveChanges')}
                     </button>
                     <button
                       type="button"
@@ -517,40 +523,40 @@ const OpportunityTicket = () => {
                       }}
                       className="btn-secondary"
                     >
-                      Cancel
+                      {t('cancel')}
                     </button>
                   </div>
                 </form>
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-600">Description</h3>
-                    <p className="mt-1 text-gray-800">{opportunity.description || 'No description provided'}</p>
+                    <h3 className="text-sm font-medium text-gray-600">{t('description')}</h3>
+                    <p className="mt-1 text-gray-800">{opportunity.description || t('noDescriptionProvided')}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h3 className="text-sm font-medium text-gray-600">Next Follow-up</h3>
+                      <h3 className="text-sm font-medium text-gray-600">{t('nextFollowup')}</h3>
                       <p className="mt-1 text-gray-800">
                         {opportunity.next_followup_date 
                           ? new Date(opportunity.next_followup_date).toLocaleDateString()
-                          : 'Not scheduled'}
+                          : t('notScheduled')}
                       </p>
                     </div>
 
                     <div>
-                      <h3 className="text-sm font-medium text-gray-600">Last Contact</h3>
+                      <h3 className="text-sm font-medium text-gray-600">{t('lastContact')}</h3>
                       <p className="mt-1 text-gray-800">
                         {opportunity.last_contact_date 
                           ? new Date(opportunity.last_contact_date).toLocaleDateString()
-                          : 'No contact yet'}
+                          : t('noContactYet')}
                       </p>
                     </div>
                   </div>
 
                   {opportunity.notes && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-600">Internal Notes</h3>
+                      <h3 className="text-sm font-medium text-gray-600">{t('internalNotes')}</h3>
                       <p className="mt-1 text-gray-800 bg-yellow-50 p-3 rounded">{opportunity.notes}</p>
                     </div>
                   )}
@@ -561,11 +567,11 @@ const OpportunityTicket = () => {
 
           {activeTab === 'activity' && (
             <div className="card">
-              <h2 className="text-xl font-bold mb-4">Activity Timeline</h2>
+              <h2 className="text-xl font-bold mb-4">{t('activityTimeline')}</h2>
               
               <div className="space-y-4">
                 {activities.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No activities yet</p>
+                  <p className="text-gray-500 text-center py-8">{t('noActivitiesYet')}</p>
                 ) : (
                   activities.map((activity) => (
                     <div key={activity.id} className="flex gap-3 border-l-2 border-gray-200 pl-4 pb-4">
@@ -575,7 +581,7 @@ const OpportunityTicket = () => {
                           <div>
                             <p className="font-medium text-gray-800">{activity.description}</p>
                             <p className="text-sm text-gray-600">
-                              by {activity.user_name} • {formatDate(activity.created_at)}
+                              {t('by')} {activity.user_name} • {formatDate(activity.created_at)}
                             </p>
                           </div>
                         </div>
@@ -604,7 +610,7 @@ const OpportunityTicket = () => {
 
           {activeTab === 'comments' && (
             <div className="card">
-              <h2 className="text-xl font-bold mb-4">Comments & Discussion</h2>
+              <h2 className="text-xl font-bold mb-4">{t('commentsDiscussion')}</h2>
               
               {/* Add Comment Form */}
               <form onSubmit={handleAddComment} className="mb-6">
@@ -613,18 +619,18 @@ const OpportunityTicket = () => {
                   onChange={(e) => setNewComment(e.target.value)}
                   className="input-field"
                   rows="3"
-                  placeholder="Add a comment..."
+                  placeholder={t('addCommentPlaceholder')}
                   required
                 />
                 <button type="submit" className="btn-primary mt-2">
-                  💬 Add Comment
+                  💬 {t('addComment')}
                 </button>
               </form>
 
               {/* Comments List */}
               <div className="space-y-4">
                 {comments.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No comments yet</p>
+                  <p className="text-gray-500 text-center py-8">{t('noCommentsYet')}</p>
                 ) : (
                   comments.map((comment) => (
                     <div key={comment.id} className="bg-gray-50 p-4 rounded-lg">
@@ -649,28 +655,28 @@ const OpportunityTicket = () => {
         <div className="space-y-6">
           {/* Details Card */}
           <div className="card">
-            <h3 className="font-bold text-gray-800 mb-3">Details</h3>
+            <h3 className="font-bold text-gray-800 mb-3">{t('details')}</h3>
             <div className="space-y-3 text-sm">
               <div>
-                <span className="text-gray-600">Customer</span>
+                <span className="text-gray-600">{t('customer')}</span>
                 <p className="font-medium text-gray-800">{opportunity.customer_name}</p>
               </div>
               <div>
-                <span className="text-gray-600">Assigned To</span>
+                <span className="text-gray-600">{t('assignedTo')}</span>
                 <p className="font-medium text-gray-800">{opportunity.assigned_to_name}</p>
               </div>
               <div>
-                <span className="text-gray-600">Source</span>
+                <span className="text-gray-600">{t('source')}</span>
                 <p className="font-medium text-gray-800 capitalize">{opportunity.source}</p>
               </div>
               <div>
-                <span className="text-gray-600">Created</span>
+                <span className="text-gray-600">{t('created')}</span>
                 <p className="font-medium text-gray-800">
                   {new Date(opportunity.created_at).toLocaleDateString()}
                 </p>
               </div>
               <div>
-                <span className="text-gray-600">Last Updated</span>
+                <span className="text-gray-600">{t('lastUpdated')}</span>
                 <p className="font-medium text-gray-800">
                   {new Date(opportunity.updated_at).toLocaleDateString()}
                 </p>
@@ -680,7 +686,7 @@ const OpportunityTicket = () => {
 
           {/* Progress Card */}
           <div className="card">
-            <h3 className="font-bold text-gray-800 mb-3">Progress</h3>
+            <h3 className="font-bold text-gray-800 mb-3">{t('progress')}</h3>
             <div className="space-y-2">
               {pipelineStages.map((stage, index) => {
                 const currentStageIndex = pipelineStages.findIndex(s => s.key === formData.pipeline_stage);
@@ -697,7 +703,7 @@ const OpportunityTicket = () => {
                       {isPassed ? '✓' : index + 1}
                     </div>
                     <span className={`text-sm ${isCurrent ? 'font-bold' : ''}`}>
-                      {stage.label}
+                      {t(stage.labelKey)}
                     </span>
                   </div>
                 );

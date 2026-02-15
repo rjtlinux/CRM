@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { dashboardAPI, salesAPI, costsAPI, customersAPI, opportunitiesAPI, leadsAPI } from '../services/api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useLanguage } from '../context/LanguageContext';
+import { formatIndianCurrency } from '../utils/indianFormatters';
 
 const Dashboard = () => {
+  const { t } = useLanguage();
   const [stats, setStats] = useState(null);
   const [salesTrend, setSalesTrend] = useState([]);
   const [revenueData, setRevenueData] = useState(null);
@@ -73,14 +76,14 @@ const Dashboard = () => {
         case 'revenue':
           const salesRes = await salesAPI.getAll();
           data = salesRes.data.sales.filter(s => s.status === 'completed');
-          title = 'Completed Sales - Revenue Details';
+          title = t('completedSalesRevenueDetails');
           setModalType('sales');
           break;
         
         case 'costs':
           const costsRes = await costsAPI.getAll();
           data = costsRes.data.costs;
-          title = 'All Costs & Expenses';
+          title = t('allCostsExpenses');
           setModalType('costs');
           break;
         
@@ -93,21 +96,21 @@ const Dashboard = () => {
             sales: salesRes2.data.sales.filter(s => s.status === 'completed'),
             costs: costsRes2.data.costs
           };
-          title = 'Net Profit Breakdown';
+          title = t('netProfitBreakdown');
           setModalType('profit');
           break;
         
         case 'customers':
           const customersRes = await customersAPI.getAll();
           data = customersRes.data.customers.filter(c => c.status === 'active');
-          title = 'Active Customers';
+          title = t('activeCustomers');
           setModalType('customers');
           break;
         
         case 'total_leads':
           const allLeadsRes = await leadsAPI.getAll();
           data = allLeadsRes.data.leads;
-          title = 'All Leads';
+          title = t('allLeads');
           setModalType('leads');
           break;
         
@@ -116,7 +119,7 @@ const Dashboard = () => {
           data = activeLeadsRes.data.leads.filter(l => 
             l.status === 'active' || l.status === 'contacted' || l.status === 'qualified'
           );
-          title = 'Active Leads';
+          title = t('activeLeads');
           setModalType('leads');
           break;
         
@@ -125,7 +128,7 @@ const Dashboard = () => {
           data = oppsRes.data.opportunities
             .filter(opp => parseFloat(opp.value) >= 30000 && opp.pipeline_stage !== 'closed_lost')
             .sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
-          title = 'High Value Deals (Over $30,000)';
+          title = t('highValueDealsOver30000');
           setModalType('opportunities');
           break;
       }
@@ -150,7 +153,7 @@ const Dashboard = () => {
   if (loading && !stats) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-xl">Loading dashboard...</div>
+        <div className="text-xl">{t('loading')}</div>
       </div>
     );
   }
@@ -158,15 +161,15 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{t('dashboard')}</h1>
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
           className="input-field w-40"
         >
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="yearly">Yearly</option>
+          <option value="weekly">{t('weekly')}</option>
+          <option value="monthly">{t('monthly')}</option>
+          <option value="yearly">{t('yearly')}</option>
         </select>
       </div>
 
@@ -176,54 +179,54 @@ const Dashboard = () => {
           onClick={() => handleTileClick('revenue')}
           className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          <div className="text-sm opacity-90">Total Revenue</div>
+          <div className="text-sm opacity-90">{t('totalRevenue')}</div>
           <div className="text-3xl font-bold mt-2">
-            ${stats?.total_revenue?.toLocaleString() || 0}
+            {formatIndianCurrency(stats?.total_revenue || 0)}
           </div>
           <div className="text-sm mt-2 opacity-90">
-            {stats?.recent_sales?.filter(s => s.status === 'completed').length || 0} completed sales
+            {stats?.recent_sales?.filter(s => s.status === 'completed').length || 0} {t('completedSales')}
           </div>
-          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
+          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
         </div>
 
         <div 
           onClick={() => handleTileClick('costs')}
           className="card bg-gradient-to-br from-red-500 to-red-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          <div className="text-sm opacity-90">Total Costs</div>
+          <div className="text-sm opacity-90">{t('totalCosts')}</div>
           <div className="text-3xl font-bold mt-2">
-            ${stats?.total_costs?.toLocaleString() || 0}
+            {formatIndianCurrency(stats?.total_costs || 0)}
           </div>
-          <div className="text-sm mt-2 opacity-90">Operating expenses</div>
-          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
+          <div className="text-sm mt-2 opacity-90">{t('operatingExpenses')}</div>
+          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
         </div>
 
         <div 
           onClick={() => handleTileClick('profit')}
           className="card bg-gradient-to-br from-green-500 to-green-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          <div className="text-sm opacity-90">Net Profit</div>
+          <div className="text-sm opacity-90">{t('netProfit')}</div>
           <div className="text-3xl font-bold mt-2">
-            ${stats?.net_profit?.toLocaleString() || 0}
+            {formatIndianCurrency(stats?.net_profit || 0)}
           </div>
           <div className="text-sm mt-2 opacity-90">
-            {stats?.net_profit > 0 ? 'Positive margin' : 'Needs attention'}
+            {stats?.net_profit > 0 ? t('positiveMargin') : t('needsAttention')}
           </div>
-          <div className="text-xs mt-2 opacity-75">Click to view breakdown →</div>
+          <div className="text-xs mt-2 opacity-75">{t('clickToViewBreakdown')}</div>
         </div>
 
         <div 
           onClick={() => handleTileClick('customers')}
           className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          <div className="text-sm opacity-90">Active Customers</div>
+          <div className="text-sm opacity-90">{t('activeCustomers')}</div>
           <div className="text-3xl font-bold mt-2">
             {stats?.total_customers || 0}
           </div>
           <div className="text-sm mt-2 opacity-90">
-            {stats?.total_proposals || 0} active proposals
+            {stats?.total_proposals || 0} {t('activeProposals')}
           </div>
-          <div className="text-xs mt-2 opacity-75">Click to view list →</div>
+          <div className="text-xs mt-2 opacity-75">{t('clickToViewList')}</div>
         </div>
       </div>
 
@@ -233,42 +236,42 @@ const Dashboard = () => {
           onClick={() => handleTileClick('total_leads')}
           className="card bg-gradient-to-br from-cyan-500 to-cyan-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          <div className="text-sm opacity-90">Total Leads</div>
+          <div className="text-sm opacity-90">{t('totalLeads')}</div>
           <div className="text-3xl font-bold mt-2">
             {leadsData.total}
           </div>
           <div className="text-sm mt-2 opacity-90">
-            All leads in system
+            {t('allLeadsInSystem')}
           </div>
-          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
+          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
         </div>
 
         <div 
           onClick={() => handleTileClick('active_leads')}
           className="card bg-gradient-to-br from-teal-500 to-teal-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          <div className="text-sm opacity-90">Active Leads</div>
+          <div className="text-sm opacity-90">{t('activeLeads')}</div>
           <div className="text-3xl font-bold mt-2">
             {leadsData.active}
           </div>
           <div className="text-sm mt-2 opacity-90">
-            Currently being pursued
+            {t('currentlyBeingPursued')}
           </div>
-          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
+          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
         </div>
 
         <div 
           onClick={() => handleTileClick('high_value_deals')}
           className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          <div className="text-sm opacity-90">High Value Deals</div>
+          <div className="text-sm opacity-90">{t('highValueDeals')}</div>
           <div className="text-3xl font-bold mt-2">
             {highValueDeals.length}
           </div>
           <div className="text-sm mt-2 opacity-90">
-            Deals over $30,000
+            {t('dealsOver30000')}
           </div>
-          <div className="text-xs mt-2 opacity-75">Click to view details →</div>
+          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
         </div>
       </div>
 
@@ -276,31 +279,31 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales Trend Chart */}
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Sales Trend</h2>
+          <h2 className="text-xl font-bold mb-4">{t('salesTrend')}</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={salesTrend}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="period" />
               <YAxis />
-              <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+              <Tooltip formatter={(value) => formatIndianCurrency(value)} />
               <Legend />
-              <Line type="monotone" dataKey="total_sales" stroke="#3b82f6" strokeWidth={2} name="Sales" />
+              <Line type="monotone" dataKey="total_sales" stroke="#3b82f6" strokeWidth={2} name={t('sales')} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Revenue vs Costs */}
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Revenue vs Costs (Last 6 Months)</h2>
+          <h2 className="text-xl font-bold mb-4">{t('revenueVsCostsLast6Months')}</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueData?.monthly_comparison || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip formatter={(value) => `$${parseFloat(value).toLocaleString()}`} />
+              <Tooltip formatter={(value) => formatIndianCurrency(value)} />
               <Legend />
-              <Bar dataKey="revenue" fill="#10b981" name="Revenue" />
-              <Bar dataKey="costs" fill="#ef4444" name="Costs" />
+              <Bar dataKey="revenue" fill="#10b981" name={t('revenue')} />
+              <Bar dataKey="costs" fill="#ef4444" name={t('costs')} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -310,7 +313,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Costs by Category */}
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Costs by Category</h2>
+          <h2 className="text-xl font-bold mb-4">{t('costsByCategory')}</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -320,20 +323,20 @@ const Dashboard = () => {
                 cx="50%"
                 cy="50%"
                 outerRadius={100}
-                label={(entry) => `${entry.category}: $${parseFloat(entry.total).toLocaleString()}`}
+                label={(entry) => `${entry.category}: ${formatIndianCurrency(entry.total)}`}
               >
                 {(revenueData?.costs_by_category || []).map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `$${parseFloat(value).toLocaleString()}`} />
+              <Tooltip formatter={(value) => formatIndianCurrency(value)} />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
         {/* Recent Sales */}
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Recent Sales</h2>
+          <h2 className="text-xl font-bold mb-4">{t('recentSales')}</h2>
           <div className="space-y-3">
             {stats?.recent_sales?.slice(0, 5).map((sale) => (
               <div key={sale.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
@@ -344,7 +347,7 @@ const Dashboard = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-green-600">
-                    ${parseFloat(sale.amount).toLocaleString()}
+                    {formatIndianCurrency(sale.amount)}
                   </p>
                   <p className={`text-xs px-2 py-1 rounded-full inline-block ${
                     sale.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -362,20 +365,20 @@ const Dashboard = () => {
       {highValueDeals.length > 0 && (
         <div className="card">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">🎯 High Value Deals</h2>
-            <span className="text-sm text-gray-500">Deals over $30,000</span>
+            <h2 className="text-xl font-bold">🎯 {t('highValueDeals')}</h2>
+            <span className="text-sm text-gray-500">{t('dealsOver30000')}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">Deal Title</th>
-                  <th className="text-left py-3 px-4">Customer</th>
-                  <th className="text-left py-3 px-4">Value</th>
-                  <th className="text-left py-3 px-4">Stage</th>
-                  <th className="text-left py-3 px-4">Probability</th>
-                  <th className="text-left py-3 px-4">Expected Close</th>
-                  <th className="text-left py-3 px-4">Assigned To</th>
+                  <th className="text-left py-3 px-4">{t('dealTitle')}</th>
+                  <th className="text-left py-3 px-4">{t('customer')}</th>
+                  <th className="text-left py-3 px-4">{t('value')}</th>
+                  <th className="text-left py-3 px-4">{t('stage')}</th>
+                  <th className="text-left py-3 px-4">{t('probability')}</th>
+                  <th className="text-left py-3 px-4">{t('expectedClose')}</th>
+                  <th className="text-left py-3 px-4">{t('assignedTo')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -385,7 +388,7 @@ const Dashboard = () => {
                     <td className="py-3 px-4">{deal.customer_name}</td>
                     <td className="py-3 px-4">
                       <span className="font-bold text-green-600 text-lg">
-                        ${parseFloat(deal.value).toLocaleString()}
+                        {formatIndianCurrency(deal.value)}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -427,17 +430,17 @@ const Dashboard = () => {
           {/* Total Weighted Value */}
           <div className="mt-4 pt-4 border-t flex justify-between items-center">
             <div className="text-gray-600">
-              <span className="font-medium">Total Potential Revenue:</span>
+              <span className="font-medium">{t('totalPotentialRevenue')}:</span>
               <span className="ml-2 text-2xl font-bold text-green-600">
-                ${highValueDeals.reduce((sum, deal) => sum + parseFloat(deal.value), 0).toLocaleString()}
+                {formatIndianCurrency(highValueDeals.reduce((sum, deal) => sum + parseFloat(deal.value), 0))}
               </span>
             </div>
             <div className="text-gray-600">
-              <span className="font-medium">Weighted Value:</span>
+              <span className="font-medium">{t('weightedValue')}:</span>
               <span className="ml-2 text-2xl font-bold text-blue-600">
-                ${highValueDeals.reduce((sum, deal) => 
+                {formatIndianCurrency(highValueDeals.reduce((sum, deal) => 
                   sum + (parseFloat(deal.value) * (deal.closing_probability / 100)), 0
-                ).toLocaleString()}
+                ))}
               </span>
             </div>
           </div>
@@ -466,12 +469,12 @@ const Dashboard = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b bg-gray-50">
-                        <th className="text-left py-3 px-4">Invoice #</th>
-                        <th className="text-left py-3 px-4">Customer</th>
-                        <th className="text-left py-3 px-4">Date</th>
-                        <th className="text-left py-3 px-4">Amount</th>
-                        <th className="text-left py-3 px-4">Payment Method</th>
-                        <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">{t('invoiceNumber')}</th>
+                        <th className="text-left py-3 px-4">{t('customer')}</th>
+                        <th className="text-left py-3 px-4">{t('date')}</th>
+                        <th className="text-left py-3 px-4">{t('amount')}</th>
+                        <th className="text-left py-3 px-4">{t('paymentMethod')}</th>
+                        <th className="text-left py-3 px-4">{t('status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -481,7 +484,7 @@ const Dashboard = () => {
                           <td className="py-3 px-4">{sale.customer_name}</td>
                           <td className="py-3 px-4">{new Date(sale.sale_date).toLocaleDateString()}</td>
                           <td className="py-3 px-4 font-bold text-green-600">
-                            ${parseFloat(sale.amount).toLocaleString()}
+                            {formatIndianCurrency(sale.amount)}
                           </td>
                           <td className="py-3 px-4">{sale.payment_method || '-'}</td>
                           <td className="py-3 px-4">
@@ -494,9 +497,9 @@ const Dashboard = () => {
                     </tbody>
                     <tfoot>
                       <tr className="bg-gray-100 font-bold">
-                        <td colSpan="3" className="py-3 px-4 text-right">Total Revenue:</td>
+                        <td colSpan="3" className="py-3 px-4 text-right">{t('totalRevenue')}:</td>
                         <td className="py-3 px-4 text-green-600 text-xl">
-                          ${modalData.reduce((sum, s) => sum + parseFloat(s.amount), 0).toLocaleString()}
+                          {formatIndianCurrency(modalData.reduce((sum, s) => sum + parseFloat(s.amount), 0))}
                         </td>
                         <td colSpan="2"></td>
                       </tr>
@@ -510,12 +513,12 @@ const Dashboard = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b bg-gray-50">
-                        <th className="text-left py-3 px-4">Date</th>
-                        <th className="text-left py-3 px-4">Category</th>
-                        <th className="text-left py-3 px-4">Description</th>
-                        <th className="text-left py-3 px-4">Vendor</th>
-                        <th className="text-left py-3 px-4">Amount</th>
-                        <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">{t('date')}</th>
+                        <th className="text-left py-3 px-4">{t('category')}</th>
+                        <th className="text-left py-3 px-4">{t('description')}</th>
+                        <th className="text-left py-3 px-4">{t('vendor')}</th>
+                        <th className="text-left py-3 px-4">{t('amount')}</th>
+                        <th className="text-left py-3 px-4">{t('status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -530,7 +533,7 @@ const Dashboard = () => {
                           <td className="py-3 px-4">{cost.description}</td>
                           <td className="py-3 px-4">{cost.vendor || '-'}</td>
                           <td className="py-3 px-4 font-bold text-red-600">
-                            ${parseFloat(cost.amount).toLocaleString()}
+                            {formatIndianCurrency(cost.amount)}
                           </td>
                           <td className="py-3 px-4">
                             <span className={`px-2 py-1 rounded-full text-xs ${
@@ -544,9 +547,9 @@ const Dashboard = () => {
                     </tbody>
                     <tfoot>
                       <tr className="bg-gray-100 font-bold">
-                        <td colSpan="4" className="py-3 px-4 text-right">Total Costs:</td>
+                        <td colSpan="4" className="py-3 px-4 text-right">{t('totalCosts')}:</td>
                         <td className="py-3 px-4 text-red-600 text-xl">
-                          ${modalData.reduce((sum, c) => sum + parseFloat(c.amount), 0).toLocaleString()}
+                          {formatIndianCurrency(modalData.reduce((sum, c) => sum + parseFloat(c.amount), 0))}
                         </td>
                         <td></td>
                       </tr>
@@ -559,44 +562,44 @@ const Dashboard = () => {
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="card bg-green-50">
-                      <div className="text-sm text-gray-600">Total Revenue</div>
+                      <div className="text-sm text-gray-600">{t('totalRevenue')}</div>
                       <div className="text-3xl font-bold text-green-600">
-                        ${modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0).toLocaleString()}
+                        {formatIndianCurrency(modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0))}
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
-                        From {modalData.sales.length} completed sales
+                        {modalData.sales.length} {t('completedSales')}
                       </div>
                     </div>
                     <div className="card bg-red-50">
-                      <div className="text-sm text-gray-600">Total Costs</div>
+                      <div className="text-sm text-gray-600">{t('totalCosts')}</div>
                       <div className="text-3xl font-bold text-red-600">
-                        ${modalData.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0).toLocaleString()}
+                        {formatIndianCurrency(modalData.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0))}
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
-                        From {modalData.costs.length} expenses
+                        {modalData.costs.length} {t('expenses')}
                       </div>
                     </div>
                     <div className="card bg-blue-50">
-                      <div className="text-sm text-gray-600">Net Profit</div>
+                      <div className="text-sm text-gray-600">{t('netProfit')}</div>
                       <div className="text-3xl font-bold text-blue-600">
-                        ${(
+                        {formatIndianCurrency(
                           modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0) -
                           modalData.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0)
-                        ).toLocaleString()}
+                        )}
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
                         {(
                           (modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0) -
                           modalData.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0)) /
                           modalData.sales.reduce((sum, s) => sum + parseFloat(s.amount), 0) * 100
-                        ).toFixed(1)}% margin
+                        ).toFixed(1)}% {t('margin')}
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <h3 className="font-bold text-lg mb-3">Top 5 Sales</h3>
+                      <h3 className="font-bold text-lg mb-3">{t('top5Sales')}</h3>
                       <div className="space-y-2">
                         {modalData.sales
                           .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
@@ -608,7 +611,7 @@ const Dashboard = () => {
                                 <div className="text-sm text-gray-600">{sale.description}</div>
                               </div>
                               <div className="font-bold text-green-600">
-                                ${parseFloat(sale.amount).toLocaleString()}
+                                {formatIndianCurrency(sale.amount)}
                               </div>
                             </div>
                           ))}
@@ -616,7 +619,7 @@ const Dashboard = () => {
                     </div>
 
                     <div>
-                      <h3 className="font-bold text-lg mb-3">Top 5 Costs</h3>
+                      <h3 className="font-bold text-lg mb-3">{t('top5Costs')}</h3>
                       <div className="space-y-2">
                         {modalData.costs
                           .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
@@ -628,7 +631,7 @@ const Dashboard = () => {
                                 <div className="text-sm text-gray-600">{cost.description}</div>
                               </div>
                               <div className="font-bold text-red-600">
-                                ${parseFloat(cost.amount).toLocaleString()}
+                                {formatIndianCurrency(cost.amount)}
                               </div>
                             </div>
                           ))}
@@ -643,12 +646,12 @@ const Dashboard = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b bg-gray-50">
-                        <th className="text-left py-3 px-4">Company</th>
-                        <th className="text-left py-3 px-4">Contact Person</th>
-                        <th className="text-left py-3 px-4">Email</th>
-                        <th className="text-left py-3 px-4">Phone</th>
-                        <th className="text-left py-3 px-4">Location</th>
-                        <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">{t('company')}</th>
+                        <th className="text-left py-3 px-4">{t('contactPerson')}</th>
+                        <th className="text-left py-3 px-4">{t('email')}</th>
+                        <th className="text-left py-3 px-4">{t('phone')}</th>
+                        <th className="text-left py-3 px-4">{t('location')}</th>
+                        <th className="text-left py-3 px-4">{t('status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -676,14 +679,14 @@ const Dashboard = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b bg-gray-50">
-                        <th className="text-left py-3 px-4">Name</th>
-                        <th className="text-left py-3 px-4">Company</th>
-                        <th className="text-left py-3 px-4">Email</th>
-                        <th className="text-left py-3 px-4">Phone</th>
-                        <th className="text-left py-3 px-4">Source</th>
-                        <th className="text-left py-3 px-4">Status</th>
-                        <th className="text-left py-3 px-4">Assigned To</th>
-                        <th className="text-left py-3 px-4">Created</th>
+                        <th className="text-left py-3 px-4">{t('name')}</th>
+                        <th className="text-left py-3 px-4">{t('company')}</th>
+                        <th className="text-left py-3 px-4">{t('email')}</th>
+                        <th className="text-left py-3 px-4">{t('phone')}</th>
+                        <th className="text-left py-3 px-4">{t('source')}</th>
+                        <th className="text-left py-3 px-4">{t('status')}</th>
+                        <th className="text-left py-3 px-4">{t('assignedTo')}</th>
+                        <th className="text-left py-3 px-4">{t('created')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -719,7 +722,7 @@ const Dashboard = () => {
                   </table>
                   {modalData.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      No leads found
+                      {t('noLeadsFound')}
                     </div>
                   )}
                 </div>
@@ -730,14 +733,14 @@ const Dashboard = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b bg-gray-50">
-                        <th className="text-left py-3 px-4">Title</th>
-                        <th className="text-left py-3 px-4">Customer</th>
-                        <th className="text-left py-3 px-4">Value</th>
-                        <th className="text-left py-3 px-4">Stage</th>
-                        <th className="text-left py-3 px-4">Probability</th>
-                        <th className="text-left py-3 px-4">Weighted Value</th>
-                        <th className="text-left py-3 px-4">Close Date</th>
-                        <th className="text-left py-3 px-4">Assigned To</th>
+                        <th className="text-left py-3 px-4">{t('title')}</th>
+                        <th className="text-left py-3 px-4">{t('customer')}</th>
+                        <th className="text-left py-3 px-4">{t('value')}</th>
+                        <th className="text-left py-3 px-4">{t('stage')}</th>
+                        <th className="text-left py-3 px-4">{t('probability')}</th>
+                        <th className="text-left py-3 px-4">{t('weightedValue')}</th>
+                        <th className="text-left py-3 px-4">{t('expectedCloseDate')}</th>
+                        <th className="text-left py-3 px-4">{t('assignedTo')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -747,7 +750,7 @@ const Dashboard = () => {
                           <td className="py-3 px-4">{opp.customer_name}</td>
                           <td className="py-3 px-4">
                             <span className="font-bold text-green-600">
-                              ${parseFloat(opp.value).toLocaleString()}
+                              {formatIndianCurrency(opp.value)}
                             </span>
                           </td>
                           <td className="py-3 px-4">
@@ -774,7 +777,7 @@ const Dashboard = () => {
                           </td>
                           <td className="py-3 px-4">
                             <span className="font-bold text-blue-600">
-                              ${(parseFloat(opp.value) * (opp.closing_probability / 100)).toLocaleString()}
+                              {formatIndianCurrency(parseFloat(opp.value) * (opp.closing_probability / 100))}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-sm">
@@ -788,18 +791,18 @@ const Dashboard = () => {
                     </tbody>
                     <tfoot>
                       <tr className="bg-gray-100 font-bold">
-                        <td colSpan="2" className="py-3 px-4 text-right">Totals:</td>
+                        <td colSpan="2" className="py-3 px-4 text-right">{t('totals')}:</td>
                         <td className="py-3 px-4 text-green-600">
-                          ${modalData.reduce((sum, o) => sum + parseFloat(o.value), 0).toLocaleString()}
+                          {formatIndianCurrency(modalData.reduce((sum, o) => sum + parseFloat(o.value), 0))}
                         </td>
                         <td></td>
                         <td className="py-3 px-4">
-                          Avg: {modalData.length > 0 
+                          {t('avg')}: {modalData.length > 0 
                             ? Math.round(modalData.reduce((sum, o) => sum + o.closing_probability, 0) / modalData.length)
                             : 0}%
                         </td>
                         <td className="py-3 px-4 text-blue-600">
-                          ${modalData.reduce((sum, o) => sum + (parseFloat(o.value) * (o.closing_probability / 100)), 0).toLocaleString()}
+                          {formatIndianCurrency(modalData.reduce((sum, o) => sum + (parseFloat(o.value) * (o.closing_probability / 100)), 0))}
                         </td>
                         <td colSpan="2"></td>
                       </tr>
@@ -807,7 +810,7 @@ const Dashboard = () => {
                   </table>
                   {modalData.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      No high-value deals found
+                      {t('noHighValueDealsFound')}
                     </div>
                   )}
                 </div>
@@ -817,7 +820,7 @@ const Dashboard = () => {
             {/* Modal Footer */}
             <div className="p-4 border-t bg-gray-50 flex justify-end">
               <button onClick={closeModal} className="btn-secondary">
-                Close
+                {t('close')}
               </button>
             </div>
           </div>

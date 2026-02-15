@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSwitch from '../components/LanguageSwitch';
 
 const Login = () => {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -31,7 +34,7 @@ const Login = () => {
         setError(result.error);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError(t('unexpectedError'));
     } finally {
       setLoading(false);
     }
@@ -45,14 +48,17 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitch />
+      </div>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            {isLogin ? t('welcomeBack') : t('createAccount')}
           </h1>
           <p className="text-gray-600">
-            {isLogin ? 'Sign in to your CRM account' : 'Start managing your business'}
+            {isLogin ? t('signInToCRM') : t('startManagingBusiness')}
           </p>
         </div>
 
@@ -66,7 +72,7 @@ const Login = () => {
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                {t('fullName')}
               </label>
               <input
                 type="text"
@@ -75,14 +81,14 @@ const Login = () => {
                 onChange={handleChange}
                 className="input-field"
                 required={!isLogin}
-                placeholder="John Doe"
+                placeholder={t('placeholderFullName')}
               />
             </div>
           )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              {t('emailAddress')}
             </label>
             <input
               type="email"
@@ -91,13 +97,13 @@ const Login = () => {
               onChange={handleChange}
               className="input-field"
               required
-              placeholder="you@example.com"
+              placeholder={t('placeholderEmail')}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              {t('password')}
             </label>
             <input
               type="password"
@@ -116,7 +122,7 @@ const Login = () => {
             disabled={loading}
             className="w-full btn-primary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Sign Up')}
+            {loading ? t('pleaseWait') : (isLogin ? t('signIn') : t('signUp'))}
           </button>
         </form>
 
@@ -128,15 +134,15 @@ const Login = () => {
             }}
             className="text-primary-600 hover:text-primary-700 font-medium"
           >
-            {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+            {isLogin ? `${t('dontHaveAccount')} ${t('signUp')}` : `${t('alreadyHaveAccount')} ${t('signIn')}`}
           </button>
         </div>
 
         {isLogin && (
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-700 font-medium mb-2">Demo Credentials:</p>
-            <p className="text-sm text-gray-600">Email: admin@crm.com</p>
-            <p className="text-sm text-gray-600">Password: admin123</p>
+            <p className="text-sm text-gray-700 font-medium mb-2">{t('demoCredentials')}</p>
+            <p className="text-sm text-gray-600">{t('demoEmail')}</p>
+            <p className="text-sm text-gray-600">{t('demoPassword')}</p>
           </div>
         )}
       </div>

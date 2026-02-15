@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import { customersAPI } from '../services/api';
 
 const Customers = () => {
+  const { t } = useLanguage();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -42,15 +44,15 @@ const Customers = () => {
   ];
 
   const businessTypes = [
-    { value: 'new', label: 'New Business' },
-    { value: 'old', label: 'Old Business' }
+    { value: 'new', labelKey: 'newBusiness' },
+    { value: 'old', labelKey: 'oldBusiness' }
   ];
 
   const generationModes = [
-    { value: 'cold_call', label: 'Cold Call' },
-    { value: 'web_enquiry', label: 'Web Enquiry' },
-    { value: 'exhibition', label: 'Exhibition' },
-    { value: 'reference', label: 'Reference' }
+    { value: 'cold_call', labelKey: 'coldCall' },
+    { value: 'web_enquiry', labelKey: 'webEnquiry' },
+    { value: 'exhibition', labelKey: 'exhibition' },
+    { value: 'reference', labelKey: 'reference' }
   ];
 
   const companySizes = [
@@ -89,20 +91,20 @@ const Customers = () => {
       closeModal();
     } catch (error) {
       console.error('Error saving customer:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to save customer';
+      const errorMessage = error.response?.data?.error || t('failedToSave');
       alert(errorMessage);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this customer?')) return;
+    if (!window.confirm(t('confirmDelete'))) return;
     
     try {
       await customersAPI.delete(id);
       fetchCustomers();
     } catch (error) {
       console.error('Error deleting customer:', error);
-      alert('Failed to delete customer');
+      alert(t('failedToDelete'));
     }
   };
 
@@ -145,15 +147,15 @@ const Customers = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading customers...</div>;
+    return <div className="text-center py-8">{t('loading')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Customers</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{t('customers')}</h1>
         <button onClick={() => openModal()} className="btn-primary">
-          + Add Customer
+          + {t('add')} {t('customer')}
         </button>
       </div>
 
@@ -162,14 +164,14 @@ const Customers = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-3 px-4">Company</th>
-                <th className="text-left py-3 px-4">Contact Person</th>
-                <th className="text-left py-3 px-4">Email</th>
-                <th className="text-left py-3 px-4">Phone</th>
-                <th className="text-left py-3 px-4">Location</th>
-                <th className="text-left py-3 px-4">Sector</th>
-                <th className="text-left py-3 px-4">Status</th>
-                <th className="text-left py-3 px-4">Actions</th>
+                <th className="text-left py-3 px-4">{t('company')}</th>
+                <th className="text-left py-3 px-4">{t('contactPerson')}</th>
+                <th className="text-left py-3 px-4">{t('email')}</th>
+                <th className="text-left py-3 px-4">{t('phone')}</th>
+                <th className="text-left py-3 px-4">{t('location')}</th>
+                <th className="text-left py-3 px-4">{t('sector')}</th>
+                <th className="text-left py-3 px-4">{t('status')}</th>
+                <th className="text-left py-3 px-4">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -182,14 +184,14 @@ const Customers = () => {
                   <td className="py-3 px-4">{customer.city}, {customer.country}</td>
                   <td className="py-3 px-4">
                     <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                      {customer.sector || 'Other'}
+                      {customer.sector || t('other')}
                     </span>
                   </td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {customer.status}
+                      {customer.status === 'active' ? t('active') : t('inactive')}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -197,13 +199,13 @@ const Customers = () => {
                       onClick={() => openModal(customer)}
                       className="text-blue-600 hover:text-blue-800 mr-3"
                     >
-                      Edit
+                      {t('edit')}
                     </button>
                     <button
                       onClick={() => handleDelete(customer.id)}
                       className="text-red-600 hover:text-red-800"
                     >
-                      Delete
+                      {t('delete')}
                     </button>
                   </td>
                 </tr>
@@ -218,16 +220,16 @@ const Customers = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6">
-              {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
+              {editingCustomer ? t('editCustomer') : t('createCustomer')}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Company Information */}
               <div className="border-b pb-4 mb-4">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Company Information</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('companyInformation')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Company Name *
+                      {t('companyName')} *
                     </label>
                     <input
                       type="text"
@@ -241,7 +243,7 @@ const Customers = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sector *
+                      {t('sector')} *
                     </label>
                     <select
                       name="sector"
@@ -251,7 +253,7 @@ const Customers = () => {
                       required
                     >
                       {sectors.map((sector) => (
-                        <option key={sector} value={sector}>{sector}</option>
+                        <option key={sector} value={sector}>{sector === 'Other' ? t('other') : sector}</option>
                       ))}
                     </select>
                   </div>
@@ -260,7 +262,7 @@ const Customers = () => {
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Company Size *
+                      {t('companySize')} *
                     </label>
                     <select
                       name="company_size"
@@ -269,7 +271,7 @@ const Customers = () => {
                       className="input-field"
                       required
                     >
-                      <option value="">Select Size</option>
+                      <option value="">{t('select')} {t('companySize')}</option>
                       {companySizes.map((size) => (
                         <option key={size.value} value={size.value}>{size.label}</option>
                       ))}
@@ -277,7 +279,7 @@ const Customers = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Business Type *
+                      {t('businessType')} *
                     </label>
                     <select
                       name="business_type"
@@ -287,7 +289,7 @@ const Customers = () => {
                       required
                     >
                       {businessTypes.map((type) => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
+                        <option key={type.value} value={type.value}>{t(type.labelKey)}</option>
                       ))}
                     </select>
                   </div>
@@ -296,11 +298,11 @@ const Customers = () => {
 
               {/* Contact Information */}
               <div className="border-b pb-4 mb-4">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Contact Information</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('contactInformation')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Person Name *
+                      {t('contactPerson')} *
                     </label>
                     <input
                       type="text"
@@ -314,7 +316,7 @@ const Customers = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Designation *
+                      {t('contactDesignation')} *
                     </label>
                     <input
                       type="text"
@@ -331,7 +333,7 @@ const Customers = () => {
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email *
+                      {t('email')} *
                     </label>
                     <input
                       type="email"
@@ -345,7 +347,7 @@ const Customers = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone *
+                      {t('phone')} *
                     </label>
                     <input
                       type="tel"
@@ -362,11 +364,11 @@ const Customers = () => {
 
               {/* Address Information */}
               <div className="border-b pb-4 mb-4">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Address Information</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('addressInformation')}</h3>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Address *
-                  </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('address')} *
+                    </label>
                   <input
                     type="text"
                     name="address"
@@ -381,7 +383,7 @@ const Customers = () => {
                 <div className="grid grid-cols-3 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City *
+                      {t('city')} *
                     </label>
                     <input
                       type="text"
@@ -395,7 +397,7 @@ const Customers = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pincode *
+                      {t('pincode')} *
                     </label>
                     <input
                       type="text"
@@ -409,7 +411,7 @@ const Customers = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Country *
+                      {t('country')} *
                     </label>
                     <input
                       type="text"
@@ -426,11 +428,11 @@ const Customers = () => {
 
               {/* Lead Information */}
               <div className="border-b pb-4 mb-4">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3">Lead Information</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('leadInformation')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Generation Mode *
+                      {t('generationMode')} *
                     </label>
                     <select
                       name="generation_mode"
@@ -440,13 +442,13 @@ const Customers = () => {
                       required
                     >
                       {generationModes.map((mode) => (
-                        <option key={mode.value} value={mode.value}>{mode.label}</option>
+                        <option key={mode.value} value={mode.value}>{t(mode.labelKey)}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status *
+                      {t('status')} *
                     </label>
                     <select
                       name="status"
@@ -455,8 +457,8 @@ const Customers = () => {
                       className="input-field"
                       required
                     >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="active">{t('active')}</option>
+                      <option value="inactive">{t('inactive')}</option>
                     </select>
                   </div>
                 </div>
@@ -464,10 +466,10 @@ const Customers = () => {
 
               <div className="flex justify-end gap-3 mt-6">
                 <button type="button" onClick={closeModal} className="btn-secondary">
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  {editingCustomer ? 'Update' : 'Create'} Customer
+                  {editingCustomer ? t('update') : t('create')} {t('customer')}
                 </button>
               </div>
             </form>
