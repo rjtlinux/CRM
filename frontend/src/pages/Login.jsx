@@ -54,10 +54,18 @@ const Login = () => {
       </div>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <img src="/buzeye-logo.png" alt="Buzeye" className="h-16 w-16" />
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary-500/30 to-accent-500/30 rounded-2xl blur-xl"></div>
+              <div className="relative bg-gradient-to-br from-primary-50 to-accent-50 p-4 rounded-2xl shadow-lg ring-4 ring-white">
+                <img src="/buzeye-logo.png" alt="Buzeye" className="h-16 w-16" />
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent mb-1">
+            Buzeye
+          </h2>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
             {isLogin ? t('welcomeBack') : t('createAccount')}
           </h1>
           <p className="text-gray-600">

@@ -210,8 +210,8 @@ export const translations = {
     dontHaveAccount: 'खाता नहीं है?',
     emailAddress: 'ईमेल पता',
     demoCredentials: 'डेमो क्रेडेंशियल्स:',
-    demoEmail: 'ईमेल: admin@crm.com',
-    demoPassword: 'पासवर्ड: admin123',
+    demoEmail: 'ईमेल: admin@buzeye.com',
+    demoPassword: 'पासवर्ड: Buzeye@2026',
     pleaseWait: 'कृपया प्रतीक्षा करें...',
     unexpectedError: 'एक अप्रत्याशित त्रुटि हुई',
 
@@ -1232,8 +1232,8 @@ export const translations = {
     dontHaveAccount: "Don't have an account?",
     emailAddress: 'Email Address',
     demoCredentials: 'Demo Credentials:',
-    demoEmail: 'Email: admin@crm.com',
-    demoPassword: 'Password: admin123',
+    demoEmail: 'Email: admin@buzeye.com',
+    demoPassword: 'Password: Buzeye@2026',
     pleaseWait: 'Please wait...',
     unexpectedError: 'An unexpected error occurred',
   }

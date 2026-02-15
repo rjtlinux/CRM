@@ -34,12 +34,21 @@ const Layout = () => {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-lg">
-        <div className="p-6 border-b">
-          <div className="flex items-center gap-3 mb-2">
-            <img src="/buzeye-logo.png" alt="Buzeye" className="h-10 w-10" />
-            <h1 className="text-2xl font-bold text-primary-600">Buzeye</h1>
+        <div className="p-6 border-b bg-gradient-to-br from-primary-50 to-white">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary-500/10 rounded-lg blur-md"></div>
+              <div className="relative bg-white p-2 rounded-lg shadow-md ring-2 ring-primary-500/20">
+                <img src="/buzeye-logo.png" alt="Buzeye" className="h-8 w-8" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+                Buzeye
+              </h1>
+              <p className="text-xs text-gray-600 font-medium">Business CRM</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-500 mt-1">Business CRM</p>
           <div className="mt-3">
             <LanguageSwitch />
           </div>
