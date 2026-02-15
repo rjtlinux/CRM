@@ -3,9 +3,12 @@ import { dashboardAPI, salesAPI, costsAPI, customersAPI, opportunitiesAPI, leads
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useLanguage } from '../context/LanguageContext';
 import { formatIndianCurrency } from '../utils/indianFormatters';
+import MobileDashboard from '../components/MobileDashboard';
+import FloatingActionButton from '../components/FloatingActionButton';
 
 const Dashboard = () => {
   const { t } = useLanguage();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [stats, setStats] = useState(null);
   const [salesTrend, setSalesTrend] = useState([]);
   const [revenueData, setRevenueData] = useState(null);
@@ -25,6 +28,12 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [period]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fetchDashboardData = async () => {
     try {

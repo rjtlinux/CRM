@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageSwitch from './LanguageSwitch';
+import MobileBottomNav from './MobileBottomNav';
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -32,8 +33,8 @@ const Layout = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg">
+      {/* Sidebar - Hidden on mobile */}
+      <aside className="hidden md:flex md:w-64 bg-white shadow-lg flex-col">
         <div className="p-6 border-b bg-gradient-to-br from-primary-50 to-white">
           <div className="flex items-center gap-3 mb-3">
             <div className="relative">
@@ -103,9 +104,40 @@ const Layout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-8">
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary-500/10 rounded-lg blur-md"></div>
+              <div className="relative bg-white p-1.5 rounded-lg shadow-md ring-2 ring-primary-500/20">
+                <img src="/buzeye-logo.png" alt="Buzeye" className="h-6 w-6" />
+              </div>
+            </div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+              Buzeye
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <LanguageSwitch />
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              style={{ minHeight: '44px', minWidth: '44px' }}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Page Content - Mobile optimized padding */}
+        <div className="p-4 md:p-8 pb-20 md:pb-8">
           <Outlet />
         </div>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
       </main>
     </div>
   );
