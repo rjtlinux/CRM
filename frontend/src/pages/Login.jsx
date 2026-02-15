@@ -148,14 +148,6 @@ const Login = () => {
             {isLogin ? `${t('dontHaveAccount')} ${t('signUp')}` : `${t('alreadyHaveAccount')} ${t('signIn')}`}
           </button>
         </div>
-
-        {isLogin && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-700 font-medium mb-2">{t('demoCredentials')}</p>
-            <p className="text-sm text-gray-600">{t('demoEmail')}</p>
-            <p className="text-sm text-gray-600">{t('demoPassword')}</p>
-          </div>
-        )}
       </div>
     </div>
   );
