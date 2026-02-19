@@ -55,9 +55,7 @@ const Login = () => {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <div className="relative">
-              <img src="/buzeye-logo.png" alt="Buzeye" className="h-20 w-auto" />
-            </div>
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-24 w-auto object-contain" />
           </div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent mb-1">
             Buzeye

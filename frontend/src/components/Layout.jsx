@@ -38,7 +38,7 @@ const Layout = () => {
       <aside className="hidden md:flex md:w-64 bg-white shadow-lg flex-col">
         <div className="p-6 border-b bg-gradient-to-br from-primary-50 to-white">
           <div className="flex items-center gap-3 mb-3">
-            <img src="/buzeye-logo.png" alt="Buzeye" className="h-10 w-auto" />
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-10 w-auto object-contain" />
             <div>
               <p className="text-xs text-gray-600 font-medium">Business CRM</p>
             </div>
