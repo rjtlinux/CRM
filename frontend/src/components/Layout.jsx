@@ -37,9 +37,10 @@ const Layout = () => {
       {/* Sidebar - Hidden on mobile */}
       <aside className="hidden md:flex md:w-64 bg-white shadow-lg flex-col">
         <div className="p-6 border-b bg-gradient-to-br from-primary-50 to-white">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex flex-col items-center gap-2 mb-3 text-center">
             <img src="/buzeye-logo.png" alt="Buzeye" className="h-10 w-auto object-contain" />
             <div>
+              <h1 className="text-lg font-bold text-primary-600">Buzeye</h1>
               <p className="text-xs text-gray-600 font-medium">Business CRM</p>
             </div>
           </div>
@@ -100,7 +101,7 @@ const Layout = () => {
         {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/buzeye-logo.png" alt="Buzeye" className="h-8 w-auto" />
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitch />

@@ -52,18 +52,19 @@ const Login = () => {
       <div className="absolute top-4 right-4">
         <LanguageSwitch />
       </div>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            <img src="/buzeye-logo.png" alt="Buzeye" className="h-24 w-auto object-contain" />
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 mx-auto">
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="flex justify-center items-center w-full mb-6">
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-24 w-auto object-contain mx-auto" />
           </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent mb-1">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent mb-1 w-full">
             Buzeye
           </h2>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <p className="text-sm text-gray-500 mb-4">Business CRM</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2 w-full">
             {isLogin ? t('welcomeBack') : t('createAccount')}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 w-full">
             {isLogin ? t('signInToCRM') : t('startManagingBusiness')}
           </p>
         </div>
