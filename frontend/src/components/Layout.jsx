@@ -38,16 +38,8 @@ const Layout = () => {
       <aside className="hidden md:flex md:w-64 bg-white shadow-lg flex-col">
         <div className="p-6 border-b bg-gradient-to-br from-primary-50 to-white">
           <div className="flex items-center gap-3 mb-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary-500/10 rounded-lg blur-md"></div>
-              <div className="relative bg-white p-2 rounded-lg shadow-md ring-2 ring-primary-500/20">
-                <img src="/buzeye-logo.png" alt="Buzeye" className="h-8 w-8" />
-              </div>
-            </div>
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-10 w-auto" />
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-                Buzeye
-              </h1>
               <p className="text-xs text-gray-600 font-medium">Business CRM</p>
             </div>
           </div>
@@ -107,16 +99,8 @@ const Layout = () => {
       <main className="flex-1 overflow-auto">
         {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary-500/10 rounded-lg blur-md"></div>
-              <div className="relative bg-white p-1.5 rounded-lg shadow-md ring-2 ring-primary-500/20">
-                <img src="/buzeye-logo.png" alt="Buzeye" className="h-6 w-6" />
-              </div>
-            </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-              Buzeye
-            </h1>
+          <div className="flex items-center gap-2">
+            <img src="/buzeye-logo.png" alt="Buzeye" className="h-8 w-auto" />
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitch />
