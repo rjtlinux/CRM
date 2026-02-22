@@ -1,0 +1,92 @@
+# Full stack: Marketing (buzeye.com) + Admin CRM (admin.buzeye.com)
+# Usage: docker-compose -f docker-compose.full.yml up -d
+
+version: '3.8'
+
+services:
+  marketing:
+    build:
+      context: ./marketing
+      dockerfile: Dockerfile
+    container_name: buzeye_marketing
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - buzeye_network
+
+  database:
+    image: postgres:14-alpine
+    container_name: crm_database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crm_database
+      POSTGRES_USER: crm_user
+      POSTGRES_PASSWORD: crm_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - buzeye_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm_user -d crm_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crm_backend
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: development
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: crm_database
+      DB_USER: crm_user
+      DB_PASSWORD: crm_password
+      JWT_SECRET: docker_dev_secret_change_in_production
+      TENANTS_REGISTRY_PATH: /app/tenants/registry.json
+    ports:
+      - "5000:5000"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - buzeye_network
+    volumes:
+      - ./backend:/app
+      - ./tenants:/app/tenants:ro
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crm_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: /api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - buzeye_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:
+
+networks:
+  buzeye_network:
+    driver: bridge
