@@ -12,8 +12,10 @@ const {
 } = require('../controllers/authController');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
 
-// Public routes
-router.post('/register', register);
+// Public routes (registration disabled - admin-only onboarding)
+router.post('/register', (req, res) => {
+  res.status(403).json({ error: 'Registration disabled. Contact admin for access.' });
+});
 router.post('/login', login);
 
 // Protected routes

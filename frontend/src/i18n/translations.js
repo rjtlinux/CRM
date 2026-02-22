@@ -214,6 +214,7 @@ export const translations = {
     demoPassword: 'पासवर्ड: Buzeye@2026',
     pleaseWait: 'कृपया प्रतीक्षा करें...',
     unexpectedError: 'एक अप्रत्याशित त्रुटि हुई',
+    contactAdminForAccess: 'खाता बनाने के लिए व्यवस्थापक से संपर्क करें',
 
     // User & Auth
     login: 'लॉगिन',
@@ -1372,6 +1373,7 @@ export const translations = {
     demoPassword: 'Password: Buzeye@2026',
     pleaseWait: 'Please wait...',
     unexpectedError: 'An unexpected error occurred',
+    contactAdminForAccess: 'Contact admin to get access',
   }
 };
 

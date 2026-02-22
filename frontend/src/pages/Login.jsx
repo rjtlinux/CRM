@@ -6,16 +6,14 @@ import LanguageSwitch from '../components/LanguageSwitch';
 
 const Login = () => {
   const { t } = useLanguage();
-  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    full_name: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -24,9 +22,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = isLogin 
-        ? await login({ email: formData.email, password: formData.password })
-        : await register(formData);
+      const result = await login({ email: formData.email, password: formData.password });
 
       if (result.success) {
         navigate('/');
@@ -62,10 +58,10 @@ const Login = () => {
           </div>
           <p className="text-sm text-gray-500 mb-4">Business CRM</p>
           <h1 className="text-2xl font-bold text-gray-800 mb-2 w-full">
-            {isLogin ? t('welcomeBack') : t('createAccount')}
+            {t('welcomeBack')}
           </h1>
           <p className="text-gray-600 w-full">
-            {isLogin ? t('signInToCRM') : t('startManagingBusiness')}
+            {t('signInToCRM')}
           </p>
         </div>
 
@@ -76,23 +72,6 @@ const Login = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('fullName')}
-              </label>
-              <input
-                type="text"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                className="input-field"
-                required={!isLogin}
-                placeholder={t('placeholderFullName')}
-              />
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {t('emailAddress')}
@@ -129,21 +108,13 @@ const Login = () => {
             disabled={loading}
             className="w-full btn-primary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? t('pleaseWait') : (isLogin ? t('signIn') : t('signUp'))}
+            {loading ? t('pleaseWait') : t('signIn')}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-            }}
-            className="text-primary-600 hover:text-primary-700 font-medium"
-          >
-            {isLogin ? `${t('dontHaveAccount')} ${t('signUp')}` : `${t('alreadyHaveAccount')} ${t('signIn')}`}
-          </button>
-        </div>
+        <p className="mt-6 text-center text-sm text-gray-500">
+          {t('contactAdminForAccess')}
+        </p>
       </div>
     </div>
   );
