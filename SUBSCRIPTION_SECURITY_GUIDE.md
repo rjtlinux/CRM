@@ -70,14 +70,17 @@ This guide covers how to run Buzeye as a **subscription-based SaaS CRM** where:
 
 ---
 
-### Option D: Separate Deployment Per Tenant
+### Option D: Separate Deployment Per Tenant ✅ IMPLEMENTED
 
 **How it works:**
-- Each client gets its own app + database (e.g. `client1.buzeye.com`)
-- Subdomains or separate domains
+- Each client gets own app + database (e.g. `acme.buzeye.com`)
+- Subdomains: `{slug}.buzeye.com` → isolated Docker stack per tenant
+- Separate PostgreSQL, backend, frontend containers
 
 **Pros:** Strong isolation, custom domains, compliance-friendly  
-**Cons:** Higher cost, more运维 overhead
+**Cons:** Higher cost, more ops overhead
+
+**Implementation:** `scripts/provision-tenant.sh` + `scripts/README.md`
 
 ---
 
