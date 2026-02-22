@@ -56,12 +56,27 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d acme.buzeye.com
 ```
 
+## Rebuilding Tenant Frontends
+
+After pulling layout/UI fixes (e.g. sidebar scroll), rebuild tenant frontends:
+
+```bash
+./scripts/rebuild-tenant-frontends.sh
+```
+
+Or for a single tenant:
+```bash
+cd tenants/acme
+docker-compose build --no-cache frontend && docker-compose up -d frontend
+```
+
 ## Scripts
 
 | Script | Purpose |
 |-------|---------|
 | `provision-tenant.sh` | Create new tenant (DB + containers + admin) |
 | `list-tenants.sh` | List all provisioned tenants |
+| `rebuild-tenant-frontends.sh` | Rebuild frontend for all tenants (after UI fixes) |
 
 ## Tenant Directory Structure
 
