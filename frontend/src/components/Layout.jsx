@@ -35,8 +35,9 @@ const Layout = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar - Hidden on mobile */}
-      <aside className="hidden md:flex md:w-64 bg-white shadow-lg flex-col">
-        <div className="p-6 border-b bg-gradient-to-br from-primary-50 to-white">
+      <aside className="hidden md:flex md:w-64 md:flex-col md:h-screen bg-white shadow-lg shrink-0">
+        {/* Header - fixed at top */}
+        <div className="shrink-0 p-6 border-b bg-gradient-to-br from-primary-50 to-white">
           <div className="flex flex-col items-center gap-2 mb-3 text-center">
             <img src="/buzeye-logo.png" alt="Buzeye" className="h-10 w-auto object-contain" />
             <div>
@@ -48,8 +49,9 @@ const Layout = () => {
             <LanguageSwitch />
           </div>
         </div>
-        
-        <nav className="p-4">
+
+        {/* Nav - scrollable */}
+        <nav className="flex-1 min-h-0 overflow-y-auto p-4">
           {allNavItems.map((item) => (
             <NavLink
               key={item.path}
@@ -69,7 +71,8 @@ const Layout = () => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 w-64 p-4 border-t bg-white">
+        {/* User section - fixed at bottom */}
+        <div className="shrink-0 p-4 border-t bg-white">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center text-white font-bold">
               {user?.full_name?.charAt(0).toUpperCase()}
