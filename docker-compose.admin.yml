@@ -1,7 +1,8 @@
+# Admin CRM stack - serves admin.buzeye.com
+# Main CRM with tenant management, user admin, etc.
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   database:
     image: postgres:14-alpine
     container_name: crm_database
@@ -22,7 +23,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Backend API
   backend:
     build:
       context: ./backend
@@ -51,7 +51,6 @@ services:
       - /app/node_modules
     command: npm run dev
 
-  # Frontend
   frontend:
     build:
       context: ./frontend
@@ -68,11 +67,10 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   postgres_data:
-    driver: local
 
 networks:
   crm_network:

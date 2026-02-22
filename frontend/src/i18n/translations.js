@@ -13,6 +13,8 @@ export const translations = {
     followups: 'फॉलो-अप',
     reports: 'रिपोर्ट',
     admin: 'एडमिन',
+    tenants: 'टेनेंट',
+    tenantsSubtitle: 'प्रोविज़न किए गए टेनेंट देखें और प्रबंधित करें',
     udharKhata: 'उधार खाता',
     
     // Common Actions
@@ -701,6 +703,8 @@ export const translations = {
     followups: 'Follow-ups',
     reports: 'Reports',
     admin: 'Admin',
+    tenants: 'Tenants',
+    tenantsSubtitle: 'View and manage provisioned tenants',
     udharKhata: 'Credit Book',
     
     // Common Actions

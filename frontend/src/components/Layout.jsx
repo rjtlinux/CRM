@@ -27,9 +27,9 @@ const Layout = () => {
     { path: '/reports', label: t('reports'), icon: '📈' },
   ];
 
-  // Add Admin menu item only for admin users
+  // Add Tenants + Admin menu items for admin users (super-admin on admin.buzeye.com)
   const allNavItems = user?.role === 'admin' 
-    ? [...navItems, { path: '/admin', label: t('admin'), icon: '⚙️' }]
+    ? [...navItems, { path: '/tenants', label: t('tenants') || 'Tenants', icon: '🏢' }, { path: '/admin', label: t('admin'), icon: '⚙️' }]
     : navItems;
 
   return (

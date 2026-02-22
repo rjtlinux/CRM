@@ -13,6 +13,7 @@ import Proposals from './pages/Proposals';
 import Reports from './pages/Reports';
 import Followups from './pages/Followups';
 import Admin from './pages/Admin';
+import Tenants from './pages/Tenants';
 import UdharKhata from './pages/UdharKhata';
 import GSTDashboard from './pages/GSTDashboard';
 import GSTInvoice from './pages/GSTInvoice';
@@ -57,6 +58,7 @@ function AppRoutes() {
         <Route path="udhar-khata" element={<UdharKhata />} />
         <Route path="reports" element={<Reports />} />
         <Route path="admin" element={<Admin />} />
+        <Route path="tenants" element={<Tenants />} />
         <Route path="gst" element={<GSTDashboard />} />
         <Route path="gst/invoices" element={<GSTInvoices />} />
         <Route path="gst/invoice/new" element={<GSTInvoice />} />

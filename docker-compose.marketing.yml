@@ -1,0 +1,17 @@
+# Marketing site - serves buzeye.com
+version: '3.8'
+
+services:
+  marketing:
+    build:
+      context: ./marketing
+      dockerfile: Dockerfile
+    container_name: buzeye_marketing
+    ports:
+      - "3000:80"
+    networks:
+      - marketing_network
+
+networks:
+  marketing_network:
+    driver: bridge
