@@ -103,6 +103,21 @@ docker logs crm_acme_backend -f
 docker logs crm_acme_frontend -f
 ```
 
+## Fixing Existing Tenant with Demo Data
+
+If a tenant was provisioned before the fix and shows sample data (customers, sales, etc.):
+
+```bash
+# From CRM root
+docker exec -i crm_acme_database psql -U crm_acme -d crm_acme < scripts/clean-tenant-data.sql
+```
+
+Or re-provision from scratch (destroys data):
+```bash
+cd tenants/acme && docker-compose down -v
+# Then run provision-tenant.sh again
+```
+
 ## Security Notes
 
 - Each tenant's `.env` contains DB credentials – restrict access
