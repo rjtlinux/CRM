@@ -74,6 +74,7 @@ services:
     volumes:
       - ${SLUG}_postgres_data:/var/lib/postgresql/data
       - ${BASE_DIR}/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ${BASE_DIR}/database/migrations/005_gst_compliance.sql:/docker-entrypoint-initdb.d/02-gst.sql
     networks:
       - ${SLUG}_network
     healthcheck:
