@@ -108,7 +108,7 @@ services:
       TENANTS_REGISTRY_PATH: /app/tenants-registry/registry.json
     volumes:
       - ${TENANTS_DIR}/registry.json:/app/tenants-registry/registry.json:ro
-    ports:
+7    ports:
       - "${NEXT_BACKEND}:5000"
     depends_on:
       database:

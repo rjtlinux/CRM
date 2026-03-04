@@ -14,7 +14,7 @@ const Opportunities = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState(null);
-  const [viewMode, setViewMode] = useState('pipeline'); // 'pipeline' or 'list'
+  const [viewMode, setViewMode] = useState('list'); // 'pipeline' or 'list'
   const [selectedStage, setSelectedStage] = useState('all');
   
   // Customer search and inline creation

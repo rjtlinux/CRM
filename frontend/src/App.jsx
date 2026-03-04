@@ -8,19 +8,12 @@ import Opportunities from './pages/Opportunities';
 import OpportunityTicket from './pages/OpportunityTicket';
 import Customers from './pages/Customers';
 import Sales from './pages/Sales';
-import Leads from './pages/Leads';
 import Costs from './pages/Costs';
 import Proposals from './pages/Proposals';
 import Reports from './pages/Reports';
 import Followups from './pages/Followups';
 import Admin from './pages/Admin';
-import Tenants from './pages/Tenants';
 import UdharKhata from './pages/UdharKhata';
-import GSTDashboard from './pages/GSTDashboard';
-import GSTInvoice from './pages/GSTInvoice';
-import GSTInvoices from './pages/GSTInvoices';
-import GSTSettings from './pages/GSTSettings';
-import GSTReports from './pages/GSTReports';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -53,22 +46,12 @@ function AppRoutes() {
         <Route path="opportunities/:id" element={<OpportunityTicket />} />
         <Route path="customers" element={<Customers />} />
         <Route path="sales" element={<Sales />} />
-        <Route path="leads" element={<Leads />} />
         <Route path="costs" element={<Costs />} />
         <Route path="proposals" element={<Proposals />} />
         <Route path="followups" element={<Followups />} />
         <Route path="udhar-khata" element={<UdharKhata />} />
         <Route path="reports" element={<Reports />} />
         <Route path="admin" element={<Admin />} />
-        <Route path="tenants" element={<Tenants />} />
-        <Route path="gst" element={<GSTDashboard />} />
-        <Route path="gst/invoices" element={<GSTInvoices />} />
-        <Route path="gst/invoice/new" element={<GSTInvoice />} />
-        <Route path="gst/invoice/:id" element={<GSTInvoice />} />
-        <Route path="gst/settings" element={<GSTSettings />} />
-        <Route path="gst/reports" element={<Navigate to="/gst/reports/gstr1" replace />} />
-        <Route path="gst/reports/gstr1" element={<GSTReports />} />
-        <Route path="gst/reports/gstr3b" element={<GSTReports />} />
       </Route>
     </Routes>
   );

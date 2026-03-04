@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI, salesAPI, costsAPI, customersAPI, opportunitiesAPI, leadsAPI } from '../services/api';
+import { dashboardAPI, salesAPI, costsAPI, customersAPI, opportunitiesAPI } from '../services/api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useLanguage } from '../context/LanguageContext';
 import { formatIndianCurrency } from '../utils/indianFormatters';
@@ -15,7 +15,7 @@ const Dashboard = () => {
   const [period, setPeriod] = useState('monthly');
   const [loading, setLoading] = useState(true);
   
-  // New state for leads and opportunities
+  // Opportunities used as pipeline leads
   const [leadsData, setLeadsData] = useState({ total: 0, active: 0 });
   const [highValueDeals, setHighValueDeals] = useState([]);
   
@@ -38,32 +38,41 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [statsRes, trendRes, revenueRes, leadsRes, oppsRes] = await Promise.all([
+      const [statsRes, trendRes, revenueRes, oppsRes] = await Promise.all([
         dashboardAPI.getStats(),
         dashboardAPI.getSalesTrend(period),
         dashboardAPI.getRevenue(),
-        leadsAPI.getAll().catch(() => ({ data: { leads: [] } })),
         opportunitiesAPI.getAll().catch(() => ({ data: { opportunities: [] } })),
       ]);
 
       setStats(statsRes.data.stats);
       setSalesTrend(trendRes.data.trend);
-      setRevenueData(revenueRes.data);
+
+      // Fix costs_by_category: convert total string to number for Recharts
+      const revenue = revenueRes.data;
+      if (revenue?.costs_by_category) {
+        revenue.costs_by_category = revenue.costs_by_category.map(c => ({
+          ...c,
+          total: parseFloat(c.total) || 0,
+        }));
+      }
+      setRevenueData(revenue);
       
-      // Process leads data
-      const leads = leadsRes.data.leads || [];
-      const activeLeads = leads.filter(l => l.status === 'active' || l.status === 'contacted' || l.status === 'qualified');
+      // Use opportunities as pipeline leads
+      const opportunities = oppsRes.data.opportunities || [];
+      const activeOpps = opportunities.filter(o =>
+        o.pipeline_stage !== 'closed_won' && o.pipeline_stage !== 'closed_lost'
+      );
       setLeadsData({
-        total: leads.length,
-        active: activeLeads.length
+        total: opportunities.length,
+        active: activeOpps.length,
       });
       
-      // Process high-value deals (opportunities > $30,000)
-      const opportunities = oppsRes.data.opportunities || [];
+      // High-value deals (opportunities ≥ ₹30,000, excluding lost)
       const highValue = opportunities
         .filter(opp => parseFloat(opp.value) >= 30000 && opp.pipeline_stage !== 'closed_lost')
         .sort((a, b) => parseFloat(b.value) - parseFloat(a.value))
-        .slice(0, 5); // Top 5
+        .slice(0, 5);
       setHighValueDeals(highValue);
       
     } catch (error) {
@@ -117,19 +126,19 @@ const Dashboard = () => {
           break;
         
         case 'total_leads':
-          const allLeadsRes = await leadsAPI.getAll();
-          data = allLeadsRes.data.leads;
+          const allOppsRes = await opportunitiesAPI.getAll();
+          data = allOppsRes.data.opportunities || [];
           title = t('allLeads');
-          setModalType('leads');
+          setModalType('opportunities');
           break;
         
         case 'active_leads':
-          const activeLeadsRes = await leadsAPI.getAll();
-          data = activeLeadsRes.data.leads.filter(l => 
-            l.status === 'active' || l.status === 'contacted' || l.status === 'qualified'
+          const activeOppsRes = await opportunitiesAPI.getAll();
+          data = (activeOppsRes.data.opportunities || []).filter(o =>
+            o.pipeline_stage !== 'closed_won' && o.pipeline_stage !== 'closed_lost'
           );
           title = t('activeLeads');
-          setModalType('leads');
+          setModalType('opportunities');
           break;
         
         case 'high_value_deals':
