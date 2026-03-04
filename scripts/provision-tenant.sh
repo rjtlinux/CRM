@@ -105,6 +105,9 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      TENANTS_REGISTRY_PATH: /app/tenants-registry/registry.json
+    volumes:
+      - ${TENANTS_DIR}/registry.json:/app/tenants-registry/registry.json:ro
     ports:
       - "${NEXT_BACKEND}:5000"
     depends_on:

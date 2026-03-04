@@ -19,6 +19,7 @@ const Layout = () => {
     { path: '/udhar-khata', label: t('udharKhata'), icon: '📕' },
     { path: '/gst', label: 'GST', icon: '🧾' },
     { path: '/opportunities', label: t('opportunities'), icon: '💼' },
+    { path: '/leads', label: t('leads') || 'Leads', icon: '🎯' },
     { path: '/customers', label: t('customers'), icon: '👥' },
     { path: '/sales', label: t('sales'), icon: '💰' },
     { path: '/costs', label: t('costs'), icon: '💳' },

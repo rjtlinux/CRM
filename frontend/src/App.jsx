@@ -8,6 +8,7 @@ import Opportunities from './pages/Opportunities';
 import OpportunityTicket from './pages/OpportunityTicket';
 import Customers from './pages/Customers';
 import Sales from './pages/Sales';
+import Leads from './pages/Leads';
 import Costs from './pages/Costs';
 import Proposals from './pages/Proposals';
 import Reports from './pages/Reports';
@@ -51,7 +52,8 @@ function AppRoutes() {
         <Route path="opportunities" element={<Opportunities />} />
         <Route path="opportunities/:id" element={<OpportunityTicket />} />
         <Route path="customers" element={<Customers />} />
-        <Route path="sales" element={<Customers />} />
+        <Route path="sales" element={<Sales />} />
+        <Route path="leads" element={<Leads />} />
         <Route path="costs" element={<Costs />} />
         <Route path="proposals" element={<Proposals />} />
         <Route path="followups" element={<Followups />} />
@@ -64,6 +66,7 @@ function AppRoutes() {
         <Route path="gst/invoice/new" element={<GSTInvoice />} />
         <Route path="gst/invoice/:id" element={<GSTInvoice />} />
         <Route path="gst/settings" element={<GSTSettings />} />
+        <Route path="gst/reports" element={<Navigate to="/gst/reports/gstr1" replace />} />
         <Route path="gst/reports/gstr1" element={<GSTReports />} />
         <Route path="gst/reports/gstr3b" element={<GSTReports />} />
       </Route>
