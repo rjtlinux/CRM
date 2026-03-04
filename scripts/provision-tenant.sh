@@ -71,10 +71,17 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "${NEXT_DB}:5432"
+    restart: unless-stopped
     volumes:
       - ${SLUG}_postgres_data:/var/lib/postgresql/data
       - ${BASE_DIR}/database/schema-tenant.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ${BASE_DIR}/database/migrations/005_gst_compliance.sql:/docker-entrypoint-initdb.d/02-gst.sql
+      - ${BASE_DIR}/database/enhanced_schema.sql:/docker-entrypoint-initdb.d/02-enhanced.sql
+      - ${BASE_DIR}/database/migrations/005_gst_compliance.sql:/docker-entrypoint-initdb.d/03-gst.sql
+      - ${BASE_DIR}/database/add_customer_fields_v2.sql:/docker-entrypoint-initdb.d/04-customer-fields.sql
+      - ${BASE_DIR}/database/add_customer_sector.sql:/docker-entrypoint-initdb.d/05-customer-sector.sql
+      - ${BASE_DIR}/database/add_opportunity_workflow.sql:/docker-entrypoint-initdb.d/06-opportunity-workflow.sql
+      - ${BASE_DIR}/database/add_gst_fields.sql:/docker-entrypoint-initdb.d/07-gst-fields.sql
+      - ${BASE_DIR}/database/create_udhar_khata_views.sql:/docker-entrypoint-initdb.d/08-udhar-khata.sql
     networks:
       - ${SLUG}_network
     healthcheck:
@@ -88,6 +95,7 @@ services:
       context: ${BASE_DIR}/backend
       dockerfile: Dockerfile
     container_name: crm_${SLUG}_backend
+    restart: unless-stopped
     environment:
       PORT: 5000
       NODE_ENV: production
@@ -111,6 +119,7 @@ services:
       context: ${BASE_DIR}/frontend
       dockerfile: Dockerfile
     container_name: crm_${SLUG}_frontend
+    restart: unless-stopped
     environment:
       VITE_API_URL: /api
     ports:
