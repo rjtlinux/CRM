@@ -122,7 +122,7 @@ const UdharKhata = () => {
 
   const handleCreateCustomer = async () => {
     if (!customerForm.company_name && !customerForm.contact_person) {
-      alert('कृपया कंपनी का नाम या व्यक्ति का नाम दर्ज करें।');
+      alert(t('pleaseEnterName'));
       return;
     }
     setCreatingCustomer(true);
@@ -135,7 +135,7 @@ const UdharKhata = () => {
       setCustomerForm(defaultCustomerForm);
     } catch (e) {
       console.error('Error creating customer:', e);
-      alert('ग्राहक बनाने में त्रुटि। कृपया पुनः प्रयास करें।');
+      alert(t('customerCreateError'));
     } finally {
       setCreatingCustomer(false);
     }
@@ -144,7 +144,7 @@ const UdharKhata = () => {
   const handleSaleSubmit = async (e) => {
     e.preventDefault();
     if (!saleForm.customer_id) {
-      alert('कृपया पहले ग्राहक चुनें।');
+      alert(t('pleaseSelectCustomer'));
       return;
     }
     setSaving(true);
@@ -154,7 +154,7 @@ const UdharKhata = () => {
       fetchUdharData();
     } catch (error) {
       console.error('Error recording udhar:', error);
-      alert('उधार दर्ज करने में त्रुटि। कृपया पुनः प्रयास करें।');
+      alert(t('udharRecordError'));
     } finally {
       setSaving(false);
     }
@@ -212,7 +212,7 @@ const UdharKhata = () => {
             🔄 {t('refresh')}
           </button>
           <button onClick={openModal} className="btn-primary">
-            + उधार दर्ज करें
+            + {t('recordUdhar')}
           </button>
         </div>
       </div>
@@ -357,7 +357,7 @@ const UdharKhata = () => {
           <h3 className="text-xl font-bold text-gray-800 mb-2">{t('udharKhataEmpty')}</h3>
           <p className="text-gray-600 mb-4">{t('noOutstandingPayments')}</p>
           <button onClick={openModal} className="btn-primary">
-            + उधार दर्ज करें
+            + {t('recordUdhar')}
           </button>
         </div>
       )}
@@ -367,7 +367,7 @@ const UdharKhata = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">📕 उधार दर्ज करें</h2>
+              <h2 className="text-xl font-bold text-gray-900">📕 {t('recordUdhar')}</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
             </div>
 
@@ -375,7 +375,7 @@ const UdharKhata = () => {
               {/* Customer Select */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ग्राहक / पार्टी *
+                  {t('customerParty')} *
                 </label>
                 <div className="relative">
                   <input
@@ -390,7 +390,7 @@ const UdharKhata = () => {
                       }
                     }}
                     onFocus={() => setShowCustomerDropdown(true)}
-                    placeholder="नाम या फ़ोन से खोजें..."
+                    placeholder={t('searchByNameOrPhone')}
                     className="input-field"
                     autoComplete="off"
                   />
@@ -411,7 +411,7 @@ const UdharKhata = () => {
                         ))
                       ) : (
                         <div className="px-4 py-3 text-gray-500 text-sm">
-                          कोई ग्राहक नहीं मिला।{' '}
+                          {t('noCustomerFound')}{' '}
                           <button
                             type="button"
                             className="text-blue-600 font-medium hover:underline"
@@ -424,7 +424,7 @@ const UdharKhata = () => {
                               }));
                             }}
                           >
-                            नया ग्राहक बनाएं →
+                            {t('createNewCustomer')} →
                           </button>
                         </div>
                       )}
@@ -437,7 +437,7 @@ const UdharKhata = () => {
                     className="mt-1 text-sm text-blue-600 hover:underline"
                     onClick={() => setShowCreateCustomer(true)}
                   >
-                    + नया ग्राहक बनाएं
+                    + {t('createNewCustomer')}
                   </button>
                 )}
               </div>
@@ -446,12 +446,12 @@ const UdharKhata = () => {
               {showCreateCustomer && (
                 <div className="border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-3">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-semibold text-blue-800">नया ग्राहक बनाएं</h3>
+                    <h3 className="font-semibold text-blue-800">{t('createNewCustomer')}</h3>
                     <button type="button" onClick={() => setShowCreateCustomer(false)} className="text-gray-400 hover:text-gray-600">×</button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">कंपनी / नाम *</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{t('companyOrName')} *</label>
                       <input
                         type="text"
                         value={customerForm.company_name}
@@ -461,7 +461,7 @@ const UdharKhata = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">संपर्क व्यक्ति</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{t('contactPerson')}</label>
                       <input
                         type="text"
                         value={customerForm.contact_person}
@@ -471,7 +471,7 @@ const UdharKhata = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">फ़ोन</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{t('phone')}</label>
                       <input
                         type="tel"
                         value={customerForm.phone}
@@ -481,7 +481,7 @@ const UdharKhata = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">शहर</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">{t('city')}</label>
                       <input
                         type="text"
                         value={customerForm.city}
@@ -497,14 +497,14 @@ const UdharKhata = () => {
                     disabled={creatingCustomer}
                     className="btn-primary text-sm w-full"
                   >
-                    {creatingCustomer ? 'बना रहे हैं...' : '✓ ग्राहक बनाएं'}
+                    {creatingCustomer ? t('creating') : `✓ ${t('createCustomer')}`}
                   </button>
                 </div>
               )}
 
               {/* Amount */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">राशि (₹) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('amount')} (₹) *</label>
                 <input
                   type="number"
                   value={saleForm.amount}
@@ -518,12 +518,12 @@ const UdharKhata = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">विवरण</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('description')}</label>
                 <input
                   type="text"
                   value={saleForm.description}
                   onChange={e => setSaleForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder="माल दिया, सेवा प्रदान की..."
+                  placeholder={t('goodsServicesPlaceholder')}
                   className="input-field"
                 />
               </div>
@@ -531,7 +531,7 @@ const UdharKhata = () => {
               {/* Invoice + Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">बिल नंबर</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('billNumber')}</label>
                   <input
                     type="text"
                     value={saleForm.invoice_number}
@@ -541,7 +541,7 @@ const UdharKhata = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">तारीख</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('date')}</label>
                   <input
                     type="date"
                     value={saleForm.sale_date}
@@ -554,10 +554,10 @@ const UdharKhata = () => {
               {/* Buttons */}
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>
-                  {saving ? 'दर्ज हो रहा है...' : '📕 उधार दर्ज करें'}
+                  {saving ? t('recording') : `📕 ${t('recordUdhar')}`}
                 </button>
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
-                  रद्द करें
+                  {t('cancel')}
                 </button>
               </div>
             </form>

@@ -1,10 +1,2 @@
-1. add option to create customer in udhar khata if customer is not already in the database
-2. pick invoice number automatic from the previous invoice number, increase number by 1, in udharkhata
-3. sale is different, credit (udhar khata is differet), UDHAR Khata will be used to track udhar(loan) that user giving to someone, also if in sale, amount is in pending, it also should show in the credit book, inshort, all the money that user needs to take from someone.
-Remove the GST page completly. do not need as of now
-In the opporotunity page, make list view default 
-4. Remove the leads page completly
-5. In the dashboard, total lead show leads from opporotunity page
-6. In the dashboard, high value sale should apear in indian rupees. Curently is in dollar
-7. In the dashboard, cost by catogery showing no data, althogh one cost is added
-8. remove the tanet page as it will be in the admin.buzeye.com
+1. In creditbook section, some always come in hindi, does not matter what language is selected, fix this
+2. when creating customer in Proposal, customer creating pop up coming out behind the Proposal page, see attahed photo
