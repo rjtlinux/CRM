@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { proposalsAPI, customersAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { formatIndianCurrency } from '../utils/indianFormatters';
 
 const Proposals = () => {
   const { t } = useLanguage();
@@ -283,7 +284,7 @@ const Proposals = () => {
                   <td className="py-3 px-4">{proposal.customer_name}</td>
                   <td className="py-3 px-4">{proposal.title}</td>
                   <td className="py-3 px-4 font-bold text-primary-600">
-                    ${parseFloat(proposal.total_amount).toLocaleString()}
+                    {formatIndianCurrency(proposal.total_amount)}
                   </td>
                   <td className="py-3 px-4">
                     {proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString() : '-'}

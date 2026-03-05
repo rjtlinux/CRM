@@ -47,6 +47,7 @@ export const authAPI = {
 export const customersAPI = {
   getAll: () => api.get('/customers'),
   getById: (id) => api.get(`/customers/${id}`),
+  getDetail: (id) => api.get(`/customers/${id}/detail`),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),

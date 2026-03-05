@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Opportunities from './pages/Opportunities';
 import OpportunityTicket from './pages/OpportunityTicket';
 import Customers from './pages/Customers';
+import CustomerDetail from './pages/CustomerDetail';
 import Sales from './pages/Sales';
 import Costs from './pages/Costs';
 import Proposals from './pages/Proposals';
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="opportunities" element={<Opportunities />} />
         <Route path="opportunities/:id" element={<OpportunityTicket />} />
         <Route path="customers" element={<Customers />} />
+        <Route path="customers/:id" element={<CustomerDetail />} />
         <Route path="sales" element={<Sales />} />
         <Route path="costs" element={<Costs />} />
         <Route path="proposals" element={<Proposals />} />

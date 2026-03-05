@@ -190,9 +190,67 @@ const deleteCustomer = async (req, res) => {
   }
 };
 
+const getCustomerDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [customerRes, salesRes, udharRes, opportunitiesRes, followupsRes, proposalsRes] = await Promise.all([
+      pool.query('SELECT * FROM customers WHERE id = $1', [id]),
+      pool.query(
+        `SELECT * FROM sales WHERE customer_id = $1 AND (payment_method IS NULL OR payment_method != 'udhar')
+         ORDER BY sale_date DESC`,
+        [id]
+      ),
+      pool.query(
+        `SELECT * FROM sales WHERE customer_id = $1 AND payment_method = 'udhar' AND status = 'pending'
+         ORDER BY sale_date DESC`,
+        [id]
+      ),
+      pool.query(
+        `SELECT o.*, u.name as assigned_to_name FROM opportunities o
+         LEFT JOIN users u ON o.assigned_to = u.id
+         WHERE o.customer_id = $1 ORDER BY o.created_at DESC`,
+        [id]
+      ),
+      pool.query(
+        `SELECT f.*, u.name as assigned_to_name FROM followups f
+         LEFT JOIN users u ON f.assigned_to = u.id
+         WHERE f.opportunity_id IN (SELECT id FROM opportunities WHERE customer_id = $1)
+         ORDER BY f.followup_date DESC`,
+        [id]
+      ),
+      pool.query(
+        'SELECT * FROM proposals WHERE customer_id = $1 ORDER BY created_at DESC',
+        [id]
+      ),
+    ]);
+
+    if (customerRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    const udharEntries = udharRes.rows;
+    const totalOutstanding = udharEntries.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+
+    res.json({
+      customer: customerRes.rows[0],
+      sales: salesRes.rows,
+      udhar: udharEntries,
+      total_outstanding: totalOutstanding,
+      opportunities: opportunitiesRes.rows,
+      followups: followupsRes.rows,
+      proposals: proposalsRes.rows,
+    });
+  } catch (error) {
+    console.error('Get customer detail error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   getAllCustomers,
   getCustomerById,
+  getCustomerDetail,
   createCustomer,
   updateCustomer,
   deleteCustomer
