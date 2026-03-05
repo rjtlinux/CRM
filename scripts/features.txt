@@ -1,2 +1,1 @@
-1. In creditbook section, some always come in hindi, does not matter what language is selected, fix this
-2. when creating customer in Proposal, customer creating pop up coming out behind the Proposal page, see attahed photo
+1. when adding credit in credit book, it is not showing there, it is going to the sales. sales is when company sale something, credit book is when company give credit to someone. it is like outstanding paymanet

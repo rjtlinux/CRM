@@ -12,7 +12,7 @@ const defaultSaleForm = {
   description: '',
   invoice_number: '',
   sale_date: new Date().toISOString().split('T')[0],
-  payment_method: 'credit',
+  payment_method: 'udhar',
   status: 'pending',
 };
 

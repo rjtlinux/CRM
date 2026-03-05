@@ -6,6 +6,7 @@ const getAllSales = async (req, res) => {
       SELECT s.*, c.company_name as customer_name
       FROM sales s
       LEFT JOIN customers c ON s.customer_id = c.id
+      WHERE (s.payment_method IS NULL OR s.payment_method != 'udhar')
       ORDER BY s.sale_date DESC
     `);
     res.json({ sales: result.rows });
