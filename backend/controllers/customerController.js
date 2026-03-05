@@ -207,13 +207,13 @@ const getCustomerDetail = async (req, res) => {
         [id]
       ),
       pool.query(
-        `SELECT o.*, u.name as assigned_to_name FROM opportunities o
+        `SELECT o.*, u.full_name as assigned_to_name FROM opportunities o
          LEFT JOIN users u ON o.assigned_to = u.id
          WHERE o.customer_id = $1 ORDER BY o.created_at DESC`,
         [id]
       ),
       pool.query(
-        `SELECT f.*, u.name as assigned_to_name FROM followups f
+        `SELECT f.*, u.full_name as assigned_to_name FROM followups f
          LEFT JOIN users u ON f.assigned_to = u.id
          WHERE f.opportunity_id IN (SELECT id FROM opportunities WHERE customer_id = $1)
          ORDER BY f.followup_date DESC`,
