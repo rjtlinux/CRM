@@ -58,7 +58,7 @@ const UdharKhata = () => {
   const fetchUdharData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/udhar-khata/outstanding');
+      const response = await axios.get('/udhar-khata/outstanding');
       setCustomers(response.data.customers || []);
     } catch (error) {
       console.error('Error fetching udhar data:', error);
