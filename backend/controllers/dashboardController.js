@@ -2,48 +2,45 @@ const pool = require('../config/database');
 
 const getDashboardStats = async (req, res) => {
   try {
-    // Total revenue
-    const revenueResult = await pool.query(
-      "SELECT COALESCE(SUM(amount), 0) as total_revenue FROM sales WHERE status = 'completed'"
-    );
-    
-    // Total costs
-    const costsResult = await pool.query(
-      "SELECT COALESCE(SUM(amount), 0) as total_costs FROM costs WHERE payment_status = 'paid'"
-    );
-    
-    // Total customers
-    const customersResult = await pool.query(
-      "SELECT COUNT(*) as total_customers FROM customers WHERE status = 'active'"
-    );
-    
-    // Total proposals
-    const proposalsResult = await pool.query(
-      "SELECT COUNT(*) as total_proposals FROM proposals"
-    );
-    
-    // Pending proposals value
-    const pendingProposalsResult = await pool.query(
-      "SELECT COALESCE(SUM(total_amount), 0) as pending_value FROM proposals WHERE status IN ('draft', 'sent')"
-    );
-    
-    // Recent sales
-    const recentSalesResult = await pool.query(
-      `SELECT s.*, c.company_name as customer_name
+    const [
+      revenueResult, costsResult, customersResult,
+      proposalsResult, pendingProposalsResult, recentSalesResult,
+      outstandingResult, opportunitiesResult
+    ] = await Promise.all([
+      pool.query("SELECT COALESCE(SUM(amount), 0) as total_revenue FROM sales WHERE status = 'completed'"),
+      pool.query("SELECT COALESCE(SUM(amount), 0) as total_costs FROM costs WHERE payment_status = 'paid'"),
+      pool.query("SELECT COUNT(*) as total_customers FROM customers WHERE status = 'active'"),
+      pool.query("SELECT COUNT(*) as total_proposals FROM proposals"),
+      pool.query("SELECT COALESCE(SUM(total_amount), 0) as pending_value FROM proposals WHERE status IN ('draft', 'sent')"),
+      pool.query(`SELECT s.*, c.company_name as customer_name
        FROM sales s
        LEFT JOIN customers c ON s.customer_id = c.id
        ORDER BY s.sale_date DESC
-       LIMIT 5`
-    );
+       LIMIT 5`),
+      pool.query(`SELECT
+         COALESCE(SUM(amount), 0) as total_outstanding,
+         COUNT(DISTINCT customer_id) as customers_with_outstanding
+       FROM sales
+       WHERE payment_method = 'udhar' AND status = 'pending'`),
+      pool.query(`SELECT COUNT(*) as total FROM opportunities
+       WHERE pipeline_stage NOT IN ('closed_won', 'closed_lost')`)
+    ]);
+
+    const totalRevenue = parseFloat(revenueResult.rows[0].total_revenue);
+    const totalCosts = parseFloat(costsResult.rows[0].total_costs);
     
     const stats = {
-      total_revenue: parseFloat(revenueResult.rows[0].total_revenue),
-      total_costs: parseFloat(costsResult.rows[0].total_costs),
-      net_profit: parseFloat(revenueResult.rows[0].total_revenue) - parseFloat(costsResult.rows[0].total_costs),
+      total_revenue: totalRevenue,
+      total_costs: totalCosts,
+      net_profit: totalRevenue - totalCosts,
       total_customers: parseInt(customersResult.rows[0].total_customers),
+      active_customers: parseInt(customersResult.rows[0].total_customers),
       total_proposals: parseInt(proposalsResult.rows[0].total_proposals),
       pending_proposals_value: parseFloat(pendingProposalsResult.rows[0].pending_value),
-      recent_sales: recentSalesResult.rows
+      recent_sales: recentSalesResult.rows,
+      total_outstanding: parseFloat(outstandingResult.rows[0].total_outstanding),
+      customers_with_outstanding: parseInt(outstandingResult.rows[0].customers_with_outstanding),
+      active_opportunities: parseInt(opportunitiesResult.rows[0].total),
     };
     
     res.json({ stats });

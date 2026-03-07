@@ -17,7 +17,7 @@ const MobileDashboard = () => {
   const fetchStats = async () => {
     try {
       const response = await dashboardAPI.getStats();
-      setStats(response.data);
+      setStats(response.data.stats);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -50,7 +50,7 @@ const MobileDashboard = () => {
     },
     {
       title: t('totalRevenue'),
-      value: stats?.total_sales || 0,
+      value: stats?.total_revenue || 0,
       subtitle: t('thisMonth'),
       icon: (
         <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,15 +182,15 @@ const MobileDashboard = () => {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-4 text-center shadow-sm">
           <p className="text-2xl font-bold text-gray-900">
-            {stats?.active_customers || 0}
+            {stats?.total_customers || 0}
           </p>
           <p className="text-xs text-gray-600 mt-1">{t('customers')}</p>
         </div>
         <div className="bg-white rounded-xl p-4 text-center shadow-sm">
           <p className="text-2xl font-bold text-gray-900">
-            {stats?.active_leads || 0}
+            {stats?.total_proposals || 0}
           </p>
-          <p className="text-xs text-gray-600 mt-1">{t('leads')}</p>
+          <p className="text-xs text-gray-600 mt-1">{t('proposals')}</p>
         </div>
         <div className="bg-white rounded-xl p-4 text-center shadow-sm">
           <p className="text-2xl font-bold text-green-600">
