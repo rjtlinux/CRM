@@ -7,359 +7,332 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const cache = new NodeCache({ stdTTL: 3600 }); // 1 hour cache
+const cache = new NodeCache({ stdTTL: 3600 });
 
-// Sanitize error before sending to client — never expose internal details or env vars
 const safeError = (err) => {
   const msg = err?.message || '';
   if (msg.includes('quota') || msg.includes('429')) return 'AI service quota exceeded. Please try again later.';
   if (msg.includes('401') || msg.includes('auth')) return 'AI service configuration error.';
-  if (msg.includes('network') || msg.includes('ECONNREFUSED')) return 'Could not reach AI service. Check connection.';
   return 'AI feature temporarily unavailable. Please try again.';
 };
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+// ─── DB HELPERS ──────────────────────────────────────────────────────────────
 
 const findCustomer = async (name) => {
-  const result = await pool.query(
+  const r = await pool.query(
     `SELECT id, company_name, contact_person, phone FROM customers
      WHERE LOWER(company_name) LIKE LOWER($1) OR LOWER(contact_person) LIKE LOWER($1)
-     ORDER BY CASE WHEN LOWER(company_name) = LOWER($2) THEN 0 ELSE 1 END
+     ORDER BY CASE WHEN LOWER(company_name)=LOWER($2) OR LOWER(contact_person)=LOWER($2) THEN 0 ELSE 1 END
      LIMIT 3`,
     [`%${name}%`, name]
   );
-  return result.rows;
+  return r.rows;
 };
 
-// ─── 1. VOICE / TEXT COMMAND (multi-turn, GPT-4o) ───────────────────────────
+const nextInvoiceNumber = async () => {
+  const r = await pool.query(
+    `SELECT invoice_number FROM sales WHERE invoice_number ~ '^[0-9]+$' ORDER BY CAST(invoice_number AS INT) DESC LIMIT 1`
+  );
+  return r.rows.length > 0 ? String(parseInt(r.rows[0].invoice_number) + 1) : '1';
+};
 
-const VOICE_SYSTEM_PROMPT = `Tu ek dost hai jo Indian shopkeepers aur chhote business owners ka CRM assistant hai. Tu Hinglish mein baat karta hai - bilkul natural, jaise ek dost se baat karo.
+// ─── 1. VOICE COMMAND — GPT-4o with Function Calling ────────────────────────
 
-Tu in kaam kar sakta hai:
-1. RECORD_UDHAR - Jab koi customer ko credit/udhar diya gaya ho (maal diya, paise baad mein aayenge)
-2. CREATE_SALE - Jab koi cheez cash mein bech di ho
-3. RECORD_PAYMENT - Jab customer ne paise waapis diye
-4. CHECK_BALANCE - Kisi customer ka kitna baaki hai
-5. CHECK_SALES - Aaj ya is mahine ki sale ki jankari
-6. CREATE_CUSTOMER - Naya customer banana
+const AI_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'record_udhar',
+      description: 'Customer ko udhar/credit dena — maal ya service di aur payment baad mein milegi. Credit Book mein entry hoti hai.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_name: { type: 'string', description: 'Customer ka naam' },
+          amount: { type: 'number', description: 'Amount rupees mein (Hindi numbers bhi: paanch hazaar = 5000)' },
+          product: { type: 'string', description: 'Kya diya gaya — maal, cement, kapda, etc. (optional)' },
+          quantity: { type: 'number', description: 'Kitna diya (optional)' },
+        },
+        required: ['customer_name', 'amount'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_sale',
+      description: 'Cash sale record karna — jab customer ne turant paise diye ho',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_name: { type: 'string' },
+          amount: { type: 'number' },
+          product: { type: 'string', description: 'Kya becha (optional)' },
+        },
+        required: ['customer_name', 'amount'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'record_payment',
+      description: 'Customer ne udhar ke paise waapis diye — payment receive karna',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_name: { type: 'string' },
+          amount: { type: 'number' },
+        },
+        required: ['customer_name', 'amount'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'check_balance',
+      description: 'Kisi customer ka outstanding udhar/balance check karna',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_name: { type: 'string' },
+        },
+        required: ['customer_name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'check_sales',
+      description: 'Aaj ya is mahine ki sales ka summary dekhna',
+      parameters: {
+        type: 'object',
+        properties: {
+          period: { type: 'string', enum: ['today', 'month', 'week'] },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_customer',
+      description: 'Naya customer database mein add karna — sirf naam se, baaki details baad mein',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Customer ya company ka naam' },
+          phone: { type: 'string', description: 'Phone number (optional)' },
+        },
+        required: ['name'],
+      },
+    },
+  },
+];
 
-IMPORTANT RULES:
-- Hamesha JSON return karo
-- Agar sab info mil gayi toh:
-  {"type":"execute","intent":"RECORD_UDHAR","entities":{"customer_name":"Ramesh","amount":5000,"product":"cement"}}
-- Agar koi zaroori info missing hai toh pehle poochho:
-  {"type":"question","question":"Kitna amount hai?"}
-- Amount hamesha number mein extract karo (paanch hazaar = 5000, do lakh = 200000)
-- Customer name properly extract karo
+const VOICE_SYSTEM_PROMPT = `Tu ek samajhdar aur dosti bhara CRM assistant hai jo Indian chhote dukandaaron ki madad karta hai — kirana store, kapde ki dukaan, hardware, construction, koi bhi.
 
-Hindi number examples:
-- "paanch hazaar" = 5000
-- "das hazaar" = 10000  
-- "ek lakh" = 100000
-- "do sau" = 200
+Tu Hindi, English, aur Hinglish teeno samajhta hai. Jo bhaasha user bole, usi mein jawab de.
 
-Agar user ka command samajh nahi aaya toh:
-{"type":"unclear","question":"Mujhe samajh nahi aaya. Kya aap dobara bata sakte hain? For example: 'Ramesh ko 5000 ka maal diya' ya 'Suresh se 3000 mile'"}`;
+Tere paas ye tools hain: udhar darj karna, cash sale record karna, payment lena, balance check karna, naya customer banana.
+
+Bahut zaroori rules:
+• Responses CHHOTE rakho — 1-2 sentences maximum
+• Amounts mein ₹ sign use karo, Indian format mein (₹5,000 na ki 5000)
+• Jab koi kaam ho jaaye, clearly batao kya hua
+• Jab customer database mein nahi mile, toh seedha poochho — "Kya main [naam] ko naya customer ke roop mein add kar doon?"
+• Jab zaroori information missing ho, sirf woh ek cheez poochho
+• Bilkul formal mat bano — jaise dukaan ka koi dost baat kar raha ho
+
+Hindi numbers ka gyaan:
+paanch sau = 500 | ek hazaar = 1000 | paanch hazaar = 5000 | das hazaar = 10,000 | paanch das hazaar = 50,000 | ek lakh = 1,00,000 | do lakh = 2,00,000`;
+
+// Execute a tool call and return result string for GPT
+const executeTool = async (name, args, userId) => {
+  switch (name) {
+    case 'record_udhar': {
+      const customers = await findCustomer(args.customer_name);
+      if (!customers.length) {
+        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
+      }
+      const c = customers[0];
+      const inv = await nextInvoiceNumber();
+      const desc = [args.product, args.quantity ? `${args.quantity} units` : null, 'Voice entry']
+        .filter(Boolean).join(' · ');
+      await pool.query(
+        `INSERT INTO sales (customer_id, amount, description, status, payment_method, sale_date, invoice_number, created_by)
+         VALUES ($1, $2, $3, 'pending', 'udhar', CURRENT_DATE, $4, $5)`,
+        [c.id, args.amount, desc, inv, userId]
+      );
+      const outstanding = await pool.query(
+        `SELECT COALESCE(SUM(amount),0) as total FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
+        [c.id]
+      );
+      return JSON.stringify({
+        status: 'success',
+        action: 'udhar_recorded',
+        customer: c.company_name,
+        amount: args.amount,
+        total_outstanding: parseFloat(outstanding.rows[0].total),
+      });
+    }
+
+    case 'create_sale': {
+      const customers = await findCustomer(args.customer_name);
+      if (!customers.length) {
+        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
+      }
+      const c = customers[0];
+      const inv = await nextInvoiceNumber();
+      const desc = [args.product, 'Voice entry'].filter(Boolean).join(' · ');
+      await pool.query(
+        `INSERT INTO sales (customer_id, amount, description, status, sale_date, invoice_number, created_by)
+         VALUES ($1, $2, $3, 'completed', CURRENT_DATE, $4, $5)`,
+        [c.id, args.amount, desc, inv, userId]
+      );
+      return JSON.stringify({ status: 'success', action: 'sale_recorded', customer: c.company_name, amount: args.amount });
+    }
+
+    case 'record_payment': {
+      const customers = await findCustomer(args.customer_name);
+      if (!customers.length) {
+        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
+      }
+      const c = customers[0];
+      const pending = await pool.query(
+        `SELECT id, amount FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending' ORDER BY sale_date ASC LIMIT 1`,
+        [c.id]
+      );
+      if (pending.rows.length) {
+        const p = pending.rows[0];
+        if (parseFloat(args.amount) >= parseFloat(p.amount)) {
+          await pool.query(`UPDATE sales SET status='completed' WHERE id=$1`, [p.id]);
+        } else {
+          await pool.query(`UPDATE sales SET amount=amount-$1 WHERE id=$2`, [args.amount, p.id]);
+        }
+      } else {
+        const inv = await nextInvoiceNumber();
+        await pool.query(
+          `INSERT INTO sales (customer_id, amount, description, status, sale_date, invoice_number, created_by)
+           VALUES ($1, $2, 'Payment received (Voice entry)', 'completed', CURRENT_DATE, $3, $4)`,
+          [c.id, args.amount, inv, userId]
+        );
+      }
+      const remaining = await pool.query(
+        `SELECT COALESCE(SUM(amount),0) as total FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
+        [c.id]
+      );
+      return JSON.stringify({
+        status: 'success',
+        action: 'payment_recorded',
+        customer: c.company_name,
+        amount: args.amount,
+        remaining_balance: parseFloat(remaining.rows[0].total),
+      });
+    }
+
+    case 'check_balance': {
+      const customers = await findCustomer(args.customer_name);
+      if (!customers.length) {
+        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
+      }
+      const c = customers[0];
+      const r = await pool.query(
+        `SELECT COALESCE(SUM(amount),0) as outstanding FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
+        [c.id]
+      );
+      return JSON.stringify({ status: 'success', customer: c.company_name, outstanding: parseFloat(r.rows[0].outstanding) });
+    }
+
+    case 'check_sales': {
+      const today = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as total FROM sales WHERE sale_date=CURRENT_DATE AND status='completed'`
+      );
+      const month = await pool.query(
+        `SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as total FROM sales WHERE DATE_TRUNC('month',sale_date)=DATE_TRUNC('month',CURRENT_DATE) AND status='completed'`
+      );
+      return JSON.stringify({
+        status: 'success',
+        today: { count: parseInt(today.rows[0].count), total: parseFloat(today.rows[0].total) },
+        month: { count: parseInt(month.rows[0].count), total: parseFloat(month.rows[0].total) },
+      });
+    }
+
+    case 'create_customer': {
+      try {
+        const existing = await findCustomer(args.name);
+        if (existing.length) {
+          return JSON.stringify({ status: 'already_exists', customer: existing[0].company_name });
+        }
+        await pool.query(
+          `INSERT INTO customers (company_name, contact_person, status, created_by) VALUES ($1, $1, 'active', $2)`,
+          [args.name, userId]
+        );
+        return JSON.stringify({ status: 'success', action: 'customer_created', customer: args.name });
+      } catch (e) {
+        return JSON.stringify({ status: 'error', message: e.message });
+      }
+    }
+
+    default:
+      return JSON.stringify({ status: 'error', message: 'Unknown tool' });
+  }
+};
 
 const processVoiceCommand = async (req, res) => {
   try {
-    const { text, conversationHistory = [], pendingAction = null } = req.body;
+    const { text, messages: clientMessages = [] } = req.body;
     const userId = req.user.id;
 
-    if (!text || text.trim().length < 2) {
-      return res.status(400).json({ error: 'Command text required' });
-    }
+    if (!text?.trim()) return res.status(400).json({ error: 'Text required' });
 
-    // ── Handle pending action (user is answering a follow-up question) ──
-    if (pendingAction) {
-      return await handlePendingAction(req, res, text, pendingAction, userId);
-    }
-
-    // ── Fresh command: let GPT-4o understand it ──
+    // Build conversation: system + history (user/assistant only) + new user message
     const messages = [
       { role: 'system', content: VOICE_SYSTEM_PROMPT },
-      ...conversationHistory.slice(-6), // keep last 3 turns
+      ...clientMessages.slice(-10), // last 5 turns (user+assistant pairs)
       { role: 'user', content: text },
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages,
-      response_format: { type: 'json_object' },
-      temperature: 0.2,
-    });
-
-    const aiResponse = JSON.parse(completion.choices[0].message.content);
-
-    // GPT needs more info → send question back to user
-    if (aiResponse.type === 'question' || aiResponse.type === 'unclear') {
-      return res.json({
-        type: 'question',
-        response: aiResponse.question,
-        success: false,
-        conversationHistory: [
-          ...conversationHistory,
-          { role: 'user', content: text },
-          { role: 'assistant', content: JSON.stringify(aiResponse) },
-        ],
+    // Agentic loop — GPT calls tools until it has a final text answer
+    for (let i = 0; i < 6; i++) {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages,
+        tools: AI_TOOLS,
+        tool_choice: 'auto',
+        temperature: 0.7,
+        max_tokens: 200,
       });
+
+      const choice = completion.choices[0];
+      messages.push(choice.message);
+
+      // No tool call — GPT has a final text response
+      if (!choice.message.tool_calls?.length) {
+        const responseText = choice.message.content;
+
+        // Return updated history (user/assistant text only, strip tool messages for client)
+        const cleanHistory = messages
+          .slice(1) // remove system
+          .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+          .slice(-12);
+
+        return res.json({ response: responseText, messages: cleanHistory, success: true });
+      }
+
+      // Execute each tool call and add results
+      for (const toolCall of choice.message.tool_calls) {
+        const args = JSON.parse(toolCall.function.arguments);
+        const result = await executeTool(toolCall.function.name, args, userId);
+        messages.push({ role: 'tool', tool_call_id: toolCall.id, content: result });
+      }
     }
 
-    // GPT has all info → execute the action
-    const { intent, entities = {} } = aiResponse;
-    return await executeAndRespond(res, intent, entities, userId, text);
-
+    return res.json({ response: 'Maafi chahta hun, kuch samajh nahi aaya. Dobara bolein please.', success: false });
   } catch (error) {
     console.error('[AI] Voice command error:', error.message);
-    res.status(500).json({ error: true, response: safeError(error) });
-  }
-};
-
-// ── Execute intent and handle "customer not found" with follow-up question ──
-const executeAndRespond = async (res, intent, entities, userId, originalText) => {
-  let result;
-  switch (intent) {
-    case 'RECORD_UDHAR':   result = await recordUdharFromVoice(entities, userId); break;
-    case 'CREATE_SALE':    result = await createSaleFromVoice(entities, userId); break;
-    case 'RECORD_PAYMENT': result = await recordPaymentFromVoice(entities, userId); break;
-    case 'CHECK_BALANCE':  result = await checkBalanceFromVoice(entities); break;
-    case 'CHECK_SALES':    result = await checkSalesFromVoice(userId); break;
-    case 'CREATE_CUSTOMER':
-      result = await createCustomerOnly(entities.customer_name, userId);
-      break;
-    default:
-      result = { error: true, customerNotFound: false, message: 'Yeh command mujhe samajh nahi aaya.' };
-  }
-
-  // Customer not in DB → ask user if they want to add
-  if (result.customerNotFound) {
-    const name = entities.customer_name;
-    return res.json({
-      type: 'question',
-      response: `"${name}" naam ka koi customer nahi mila database mein. Kya aap unhe abhi naya customer ke roop mein add karna chahenge? Sirf "haan" ya "yes" bolein.`,
-      success: false,
-      pendingAction: {
-        type: 'CREATE_CUSTOMER_THEN_EXECUTE',
-        customerName: name,
-        intent,
-        entities,
-      },
-    });
-  }
-
-  const responseText = await buildNaturalResponse(intent, result);
-  return res.json({
-    type: result.error ? 'error' : 'completed',
-    response: responseText,
-    result,
-    success: !result.error,
-    clearHistory: true,
-  });
-};
-
-// ── Handle follow-up answers (e.g., "yes" to create customer) ──
-const handlePendingAction = async (req, res, text, pendingAction, userId) => {
-  if (pendingAction.type === 'CREATE_CUSTOMER_THEN_EXECUTE') {
-    // Detect yes/no in Hindi/English
-    const affirmatives = ['haan', 'ha', 'yes', 'ji', 'bilkul', 'ok', 'okay', 'hna', 'yeah', 'yep', 'sure', 'kar do', 'add karo', 'add kar'];
-    const isYes = affirmatives.some(w => text.toLowerCase().includes(w));
-
-    if (!isYes) {
-      return res.json({
-        type: 'completed',
-        response: 'Theek hai, koi baat nahi! Koi aur kaam ho toh batao.',
-        success: false,
-        clearHistory: true,
-      });
-    }
-
-    // Create the customer (name only, user will fill rest later)
-    const name = pendingAction.customerName;
-    await createCustomerOnly(name, userId);
-
-    // Now execute the original intended action
-    const result = await (async () => {
-      switch (pendingAction.intent) {
-        case 'RECORD_UDHAR':   return recordUdharFromVoice(pendingAction.entities, userId);
-        case 'CREATE_SALE':    return createSaleFromVoice(pendingAction.entities, userId);
-        case 'RECORD_PAYMENT': return recordPaymentFromVoice(pendingAction.entities, userId);
-        default:               return { success: true, type: 'customer_created' };
-      }
-    })();
-
-    const actionMsg = await buildNaturalResponse(pendingAction.intent, result);
-    return res.json({
-      type: 'completed',
-      response: `"${name}" ko naya customer ke roop mein add kar diya! ${actionMsg} Baaki details jaise phone, address aap Customers page se kabhi bhi add kar sakte hain.`,
-      success: true,
-      clearHistory: true,
-    });
-  }
-
-  return res.json({ type: 'completed', response: 'Koi pending kaam nahi mila.', clearHistory: true });
-};
-
-const recordUdharFromVoice = async (entities, userId) => {
-  if (!entities.customer_name) return { error: true, message: 'Customer ka naam batayein.' };
-  if (!entities.amount) return { error: true, message: 'Amount batayein.' };
-
-  const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
-
-  const customer = customers[0];
-
-  // Get next invoice number
-  const lastInvoice = await pool.query(`SELECT invoice_number FROM sales WHERE invoice_number ~ '^[0-9]+$' ORDER BY CAST(invoice_number AS INT) DESC LIMIT 1`);
-  const nextInvoice = lastInvoice.rows.length > 0 ? String(parseInt(lastInvoice.rows[0].invoice_number) + 1) : '1';
-
-  const desc = entities.product ? `${entities.product}${entities.quantity ? ` (${entities.quantity} units)` : ''} - Voice entry` : 'Voice entry';
-
-  await pool.query(
-    `INSERT INTO sales (customer_id, amount, description, status, payment_method, sale_date, invoice_number, created_by)
-     VALUES ($1, $2, $3, 'pending', 'udhar', CURRENT_DATE, $4, $5)`,
-    [customer.id, entities.amount, desc, nextInvoice, userId]
-  );
-
-  const outstanding = await pool.query(
-    `SELECT COALESCE(SUM(amount),0) as total FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
-    [customer.id]
-  );
-
-  return { success: true, type: 'udhar', customer: customer.company_name, amount: entities.amount, total_outstanding: outstanding.rows[0].total };
-};
-
-const createSaleFromVoice = async (entities, userId) => {
-  if (!entities.customer_name) return { error: true, message: 'Customer ka naam batayein.' };
-  if (!entities.amount) return { error: true, message: 'Amount batayein.' };
-
-  const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
-
-  const customer = customers[0];
-  const desc = entities.product ? `${entities.product}${entities.quantity ? ` - ${entities.quantity} units` : ''} (Voice entry)` : 'Voice entry';
-
-  const lastInvoice = await pool.query(`SELECT invoice_number FROM sales WHERE invoice_number ~ '^[0-9]+$' ORDER BY CAST(invoice_number AS INT) DESC LIMIT 1`);
-  const nextInvoice = lastInvoice.rows.length > 0 ? String(parseInt(lastInvoice.rows[0].invoice_number) + 1) : '1';
-
-  await pool.query(
-    `INSERT INTO sales (customer_id, amount, description, status, sale_date, invoice_number, created_by)
-     VALUES ($1, $2, $3, 'completed', CURRENT_DATE, $4, $5)`,
-    [customer.id, entities.amount, desc, nextInvoice, userId]
-  );
-
-  return { success: true, type: 'sale', customer: customer.company_name, amount: entities.amount };
-};
-
-const recordPaymentFromVoice = async (entities, userId) => {
-  if (!entities.customer_name) return { error: true, message: 'Customer ka naam batayein.' };
-  if (!entities.amount) return { error: true, message: 'Amount batayein.' };
-
-  const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
-
-  const customer = customers[0];
-
-  // Find oldest pending udhar entry and mark as completed
-  const pendingEntry = await pool.query(
-    `SELECT id, amount FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending' ORDER BY sale_date ASC LIMIT 1`,
-    [customer.id]
-  );
-
-  if (pendingEntry.rows.length > 0) {
-    const pending = pendingEntry.rows[0];
-    if (parseFloat(entities.amount) >= parseFloat(pending.amount)) {
-      // Full payment - mark as completed
-      await pool.query(`UPDATE sales SET status='completed' WHERE id=$1`, [pending.id]);
-    } else {
-      // Partial payment - reduce amount
-      await pool.query(`UPDATE sales SET amount=amount-$1 WHERE id=$2`, [entities.amount, pending.id]);
-    }
-  } else {
-    // Record as a general payment credit
-    const lastInvoice = await pool.query(`SELECT invoice_number FROM sales WHERE invoice_number ~ '^[0-9]+$' ORDER BY CAST(invoice_number AS INT) DESC LIMIT 1`);
-    const nextInvoice = lastInvoice.rows.length > 0 ? String(parseInt(lastInvoice.rows[0].invoice_number) + 1) : '1';
-    await pool.query(
-      `INSERT INTO sales (customer_id, amount, description, status, sale_date, invoice_number, created_by)
-       VALUES ($1, $2, 'Payment received (Voice entry)', 'completed', CURRENT_DATE, $3, $4)`,
-      [customer.id, entities.amount, nextInvoice, userId]
-    );
-  }
-
-  const remaining = await pool.query(
-    `SELECT COALESCE(SUM(amount),0) as total FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
-    [customer.id]
-  );
-
-  return { success: true, type: 'payment', customer: customer.company_name, amount: entities.amount, remaining_balance: remaining.rows[0].total };
-};
-
-const checkBalanceFromVoice = async (entities) => {
-  if (!entities.customer_name) return { error: true, message: 'Customer ka naam batayein.' };
-
-  const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
-
-  const customer = customers[0];
-  const result = await pool.query(
-    `SELECT COALESCE(SUM(amount),0) as outstanding FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
-    [customer.id]
-  );
-
-  return { success: true, type: 'balance', customer: customer.company_name, outstanding: result.rows[0].outstanding };
-};
-
-const checkSalesFromVoice = async (userId) => {
-  const today = await pool.query(
-    `SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as total FROM sales WHERE sale_date=CURRENT_DATE AND status='completed'`
-  );
-  const month = await pool.query(
-    `SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as total FROM sales WHERE DATE_TRUNC('month',sale_date)=DATE_TRUNC('month',CURRENT_DATE) AND status='completed'`
-  );
-  return { success: true, type: 'sales_summary', today: today.rows[0], month: month.rows[0] };
-};
-
-const createCustomerOnly = async (name, userId) => {
-  try {
-    await pool.query(
-      `INSERT INTO customers (company_name, contact_person, status, created_by)
-       VALUES ($1, $1, 'active', $2)
-       ON CONFLICT DO NOTHING`,
-      [name, userId]
-    );
-    return { success: true, type: 'customer_created', customer: name };
-  } catch (e) {
-    return { error: true, message: e.message };
-  }
-};
-
-const buildNaturalResponse = async (intent, result) => {
-  if (result?.error) return result.message || 'Kuch gadbad ho gayi.';
-
-  const facts = {
-    RECORD_UDHAR:    `${result.customer} ko ₹${parseInt(result.amount).toLocaleString('en-IN')} ka udhar darj ho gaya. Ab unka total outstanding ₹${parseInt(result.total_outstanding).toLocaleString('en-IN')} hai.`,
-    CREATE_SALE:     `${result.customer} ke naam ₹${parseInt(result.amount).toLocaleString('en-IN')} ki sale record ho gayi.`,
-    RECORD_PAYMENT:  `${result.customer} se ₹${parseInt(result.amount).toLocaleString('en-IN')} ki payment mil gayi. Ab unka baaki balance ₹${parseInt(result.remaining_balance).toLocaleString('en-IN')} hai.`,
-    CHECK_BALANCE:   `${result.customer} ka outstanding ₹${parseInt(result.outstanding).toLocaleString('en-IN')} hai.`,
-    CHECK_SALES:     `Aaj ${result.today?.count} sales hui hain, total ₹${parseInt(result.today?.total || 0).toLocaleString('en-IN')}. Is mahine mein ${result.month?.count} sales, ₹${parseInt(result.month?.total || 0).toLocaleString('en-IN')}.`,
-    CREATE_CUSTOMER: `${result.customer} ko naya customer ke roop mein add kar diya gaya.`,
-  };
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `Tu ek friendly Indian shopkeeper CRM assistant hai. Diya gaya fact ek natural, warm Hinglish sentence mein bolo. Max 2 sentences. Bilkul robotic mat lagna - dost ki tarah bolo. ₹ symbol use karo amounts ke liye.`,
-        },
-        { role: 'user', content: facts[intent] || JSON.stringify(result) },
-      ],
-      max_tokens: 80,
-      temperature: 0.8,
-    });
-    return completion.choices[0].message.content;
-  } catch {
-    return facts[intent] || 'Kaam ho gaya!';
+    res.status(500).json({ response: safeError(error), success: false });
   }
 };
 
@@ -368,35 +341,26 @@ const buildNaturalResponse = async (intent, result) => {
 const getChatResponse = async (req, res) => {
   try {
     const { messages } = req.body;
-    if (!messages || messages.length === 0) return res.status(400).json({ error: 'Messages required' });
+    if (!messages?.length) return res.status(400).json({ error: 'Messages required' });
 
-    const systemPrompt = `You are a helpful, friendly CRM assistant for Indian small businesses.
-Help users use this CRM system. Respond in the same language as the user (Hindi/English/Hinglish).
-Be concise (max 80 words), practical, and encouraging.
+    const systemPrompt = `Tu ek helpful CRM assistant hai jo Indian chhote business owners ki madad karta hai.
+Jo bhaasha user bole (Hindi/English/Hinglish), usi mein jawab de. Chhota aur kaam ki baat karo — max 3 sentences.
 
-CRM Features:
-- Dashboard: Business overview, revenue, costs, profit
-- Udhar Khata (Credit Book): Track outstanding payments, record credit given
-- Sales: Record completed sales
-- Customers: Manage customer database
-- Opportunities: Track potential deals in pipeline
-- Follow-ups: Schedule and track customer follow-ups
-- Proposals: Create and send proposals
-- Reports: Detailed analytics
+CRM features: Dashboard, Udhar Khata (Credit Book), Sales, Customers, Opportunities, Follow-ups, Proposals, Reports.
 
-Common tasks:
-- "Udhar kaise darj karein?" → Udhar Khata page pe jaayein, "+ Udhar Darj Karein" button click karein
-- "Naya customer kaise banayein?" → Customers page, "+ Add Customer"
-- "Sale kaise record karein?" → Sales page, "+ Add Sale"
-- "Balance check kaise karein?" → Udhar Khata page pe saari outstanding dikhegi
+Common help:
+- Udhar darj karna → Udhar Khata → "+ Udhar Darj Karein"
+- Naya customer → Customers → "+ Add Customer"  
+- Sale record → Sales → "+ Add Sale"
+- Outstanding balance → Udhar Khata page
 
-Always end with: "Aur kuch help chahiye?" (if Hindi) or "Need help with anything else?" (if English)`;
+Hamesha ek aur cheez offer karo help ke liye.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
-        ...messages.slice(-10), // last 10 messages for context
+        ...messages.slice(-10),
       ],
       max_tokens: 200,
       temperature: 0.7,
@@ -421,82 +385,63 @@ const generateSmartReminder = async (req, res) => {
     if (cached) return res.json(cached);
 
     const customerRes = await pool.query('SELECT * FROM customers WHERE id=$1', [customerId]);
-    if (customerRes.rows.length === 0) return res.status(404).json({ error: 'Customer not found' });
-
+    if (!customerRes.rows.length) return res.status(404).json({ error: 'Customer not found' });
     const customer = customerRes.rows[0];
 
     const outstandingRes = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as count,
-              MIN(sale_date) as oldest_date
+      `SELECT COALESCE(SUM(amount),0) as total, COUNT(*) as count, MIN(sale_date) as oldest_date
        FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
       [customerId]
     );
-
     const { total: amount, count: invoiceCount, oldest_date } = outstandingRes.rows[0];
 
     if (parseFloat(amount) === 0) {
       return res.json({ message: `${customer.company_name} ka koi outstanding nahi hai!`, amount: 0 });
     }
 
-    const daysPending = oldest_date
-      ? Math.floor((Date.now() - new Date(oldest_date)) / 86400000)
-      : 0;
+    const daysPending = oldest_date ? Math.floor((Date.now() - new Date(oldest_date)) / 86400000) : 0;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `Generate a WhatsApp payment reminder for an Indian small business owner.
-Write in Hinglish (Hindi + English mix).
-Rules:
-- Amount < ₹5,000: Very casual, friendly tone
-- Amount ₹5,000-₹50,000: Polite and professional
-- Amount > ₹50,000: More formal but still respectful
-- Days pending < 7: Very gentle reminder
-- Days pending 7-30: Standard reminder
-- Days pending > 30: Firmer but always respectful
-- Use Indian cultural norms (respect relationships)
-- Keep under 80 words
-- Include exact amount with ₹ symbol
-- End with gratitude
-- Do NOT use emojis`
+          content: `Tu ek Indian chhote business owner ki taraf se WhatsApp payment reminder likhta hai.
+Hinglish mein likho — natural, respectful, aur tone amount + days ke hisaab se rakho:
+- Amount < ₹5,000: bahut casual aur dosti bhara
+- Amount ₹5,000-₹50,000: polite aur professional
+- Amount > ₹50,000: formal lekin izzat ke saath
+- 0-7 days: bahut gentle
+- 7-30 days: standard reminder  
+- 30+ days: thoda firm lekin respectful
+Max 80 words. ₹ symbol use karo. Gratitude se khatam karo. Emojis mat use karo.`,
         },
         {
           role: 'user',
           content: `Customer: ${customer.company_name} (${customer.contact_person})
-Outstanding amount: ₹${parseFloat(amount).toLocaleString('en-IN')}
-Pending invoices: ${invoiceCount}
-Days since oldest invoice: ${daysPending} days
-Generate reminder message.`
-        }
+Outstanding: ₹${parseFloat(amount).toLocaleString('en-IN')}
+Pending bills: ${invoiceCount}
+Days since oldest: ${daysPending}
+WhatsApp reminder likho.`,
+        },
       ],
       max_tokens: 150,
       temperature: 0.8,
     });
 
     const message = completion.choices[0].message.content;
-    const now = new Date();
-    const day = now.getDay();
-    let suggestedTime = 'Tomorrow morning (10-11 AM)';
-    if (day === 5) suggestedTime = 'Friday afternoon (4-5 PM) - before weekend';
-    else if (day === 6) suggestedTime = 'Monday morning (10-11 AM)';
-    else if (day === 0) suggestedTime = 'Tomorrow morning (Monday, 10-11 AM)';
+    const day = new Date().getDay();
+    let suggestedTime = 'Kal subah 10-11 baje';
+    if (day === 5) suggestedTime = 'Aaj shaam 4-5 baje (weekend se pehle)';
+    else if (day === 6 || day === 0) suggestedTime = 'Somvar subah 10-11 baje';
 
     const phone = customer.phone?.replace(/[^0-9]/g, '');
-    const whatsappLink = phone ? `https://wa.me/91${phone.slice(-10)}?text=${encodeURIComponent(message)}` : null;
+    const whatsappLink = phone
+      ? `https://wa.me/91${phone.slice(-10)}?text=${encodeURIComponent(message)}`
+      : null;
 
-    const result = {
-      message,
-      amount: parseFloat(amount),
-      invoiceCount,
-      daysPending,
-      suggestedTime,
-      customerName: customer.company_name,
-      whatsappLink,
-    };
-
-    cache.set(cacheKey, result, 1800); // cache 30 min
+    const result = { message, amount: parseFloat(amount), invoiceCount, daysPending, suggestedTime, customerName: customer.company_name, whatsappLink };
+    cache.set(cacheKey, result, 1800);
     res.json(result);
   } catch (error) {
     console.error('[AI] Smart reminder error:', error.message);
@@ -504,7 +449,7 @@ Generate reminder message.`
   }
 };
 
-// ─── 4. DATA ENTRY SUGGESTIONS (DB-based, no OpenAI cost) ────────────────────
+// ─── 4. DATA ENTRY SUGGESTIONS (DB-based, no OpenAI) ────────────────────────
 
 const suggestDataEntry = async (req, res) => {
   try {
@@ -513,67 +458,47 @@ const suggestDataEntry = async (req, res) => {
 
     switch (field) {
       case 'customer': {
-        const result = await pool.query(
-          `SELECT c.id, c.company_name, c.contact_person, c.phone,
-                  COUNT(s.id) as order_count,
-                  MAX(s.created_at) as last_order
-           FROM customers c
-           LEFT JOIN sales s ON c.id = s.customer_id
+        const r = await pool.query(
+          `SELECT c.id, c.company_name, c.contact_person, c.phone, COUNT(s.id) as order_count, MAX(s.created_at) as last_order
+           FROM customers c LEFT JOIN sales s ON c.id=s.customer_id
            WHERE LOWER(c.company_name) LIKE LOWER($1) OR LOWER(c.contact_person) LIKE LOWER($1)
-           GROUP BY c.id
-           ORDER BY order_count DESC, last_order DESC NULLS LAST
-           LIMIT 6`,
+           GROUP BY c.id ORDER BY order_count DESC, last_order DESC NULLS LAST LIMIT 6`,
           [`%${partialInput}%`]
         );
-        suggestions = result.rows.map(c => ({
-          value: c.id,
-          label: c.company_name,
+        suggestions = r.rows.map(c => ({
+          value: c.id, label: c.company_name,
           subtitle: `${c.contact_person}${c.phone ? ' · ' + c.phone : ''} · ${c.order_count} orders`,
           confidence: parseInt(c.order_count) > 3 ? 'high' : 'medium',
         }));
         break;
       }
       case 'product': {
-        const q = partialInput
-          ? `SELECT description as product, COUNT(*) as freq FROM sales
-             WHERE ${context.customerId ? 'customer_id=$1 AND' : ''} LOWER(description) LIKE LOWER($${context.customerId ? 2 : 1})
-             GROUP BY description ORDER BY freq DESC LIMIT 5`
-          : `SELECT description as product, COUNT(*) as freq FROM sales
-             ${context.customerId ? 'WHERE customer_id=$1' : ''}
-             GROUP BY description ORDER BY freq DESC LIMIT 5`;
-
         const params = context.customerId
           ? partialInput ? [context.customerId, `%${partialInput}%`] : [context.customerId]
           : partialInput ? [`%${partialInput}%`] : [];
-
-        const result = await pool.query(q, params);
-        suggestions = result.rows.map(p => ({
-          value: p.product,
-          label: p.product,
-          subtitle: `${p.freq} times before`,
-          confidence: parseInt(p.freq) > 2 ? 'high' : 'medium',
-        }));
+        const where = context.customerId
+          ? `WHERE customer_id=$1${partialInput ? ' AND LOWER(description) LIKE LOWER($2)' : ''}`
+          : partialInput ? `WHERE LOWER(description) LIKE LOWER($1)` : '';
+        const r = await pool.query(`SELECT description as product, COUNT(*) as freq FROM sales ${where} GROUP BY description ORDER BY freq DESC LIMIT 5`, params);
+        suggestions = r.rows.map(p => ({ value: p.product, label: p.product, subtitle: `${p.freq} times before` }));
         break;
       }
       case 'amount': {
         if (context.customerId) {
-          const result = await pool.query(
-            `SELECT ROUND(AVG(amount)) as avg_amount, MAX(amount) as max_amount, MIN(amount) as min_amount
-             FROM sales WHERE customer_id=$1 AND status='completed'`,
+          const r = await pool.query(
+            `SELECT ROUND(AVG(amount)) as avg, MAX(amount) as max FROM sales WHERE customer_id=$1 AND status='completed'`,
             [context.customerId]
           );
-          const row = result.rows[0];
-          if (row.avg_amount) {
+          if (r.rows[0].avg) {
             suggestions = [
-              { value: row.avg_amount, label: `₹${parseInt(row.avg_amount).toLocaleString('en-IN')}`, subtitle: 'Usual amount', confidence: 'high' },
-              { value: row.max_amount, label: `₹${parseInt(row.max_amount).toLocaleString('en-IN')}`, subtitle: 'Highest amount', confidence: 'medium' },
+              { value: r.rows[0].avg, label: `₹${parseInt(r.rows[0].avg).toLocaleString('en-IN')}`, subtitle: 'Usual amount', confidence: 'high' },
+              { value: r.rows[0].max, label: `₹${parseInt(r.rows[0].max).toLocaleString('en-IN')}`, subtitle: 'Highest amount', confidence: 'medium' },
             ];
           }
         }
         break;
       }
     }
-
     res.json({ suggestions });
   } catch (error) {
     console.error('[AI] Suggestion error:', error.message);
@@ -592,60 +517,42 @@ const conversationalAnalytics = async (req, res) => {
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
-    // Generate SQL from natural language
     const planning = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `You convert natural language business questions to safe PostgreSQL queries for a CRM database.
+          content: `Convert natural language business questions to safe PostgreSQL SELECT queries for a CRM.
 
-Tables:
-- customers (id, company_name, contact_person, phone, city, sector, status)
-- sales (id, customer_id, amount, status, payment_method, description, sale_date)
-- costs (id, amount, category, description, cost_date)
-- opportunities (id, customer_id, value, pipeline_stage, closing_probability, expected_close_date)
-- followups (id, opportunity_id, followup_type, status, followup_date)
+Tables: customers(id,company_name,contact_person,phone,city,sector,status), sales(id,customer_id,amount,status,payment_method,description,sale_date), costs(id,amount,category,description,cost_date), opportunities(id,customer_id,value,pipeline_stage,closing_probability,expected_close_date)
 
-Rules:
-- ONLY generate SELECT queries, never INSERT/UPDATE/DELETE
-- Always use COALESCE for aggregations
-- For "udhar" or "outstanding" use: sales WHERE payment_method='udhar' AND status='pending'
-- For "revenue" use: sales WHERE status='completed'
-- Limit results to 10 rows max
+Rules: ONLY SELECT. For udhar/outstanding: WHERE payment_method='udhar' AND status='pending'. For revenue: WHERE status='completed'. LIMIT 10.
 
-Respond ONLY in JSON: {"sql": "...", "visualization": "bar|pie|line|number|table", "title": "chart title in Hinglish"}`
+Respond ONLY in JSON: {"sql":"...","visualization":"bar|pie|line|number|table","title":"chart title"}`,
         },
-        { role: 'user', content: question }
+        { role: 'user', content: question },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
     });
 
     const plan = JSON.parse(planning.choices[0].message.content);
-
-    // Safety: block non-SELECT queries
     if (!plan.sql.trim().toLowerCase().startsWith('select')) {
       return res.status(400).json({ error: 'Only SELECT queries allowed' });
     }
 
     const queryResult = await pool.query(plan.sql);
 
-    // Generate natural language answer
     const answerCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `You explain business data to an Indian small business owner in simple Hinglish.
-Be conversational, highlight the most important insight first. Max 50 words. Use ₹ for money.`
+          content: `Ek Indian chhote business owner ko unke business data ke baare mein simply samjhao. Hinglish mein, max 50 words. ₹ symbol use karo. Sabse important insight pehle batao.`,
         },
-        {
-          role: 'user',
-          content: `Question: "${question}"\nData: ${JSON.stringify(queryResult.rows.slice(0, 5))}\nExplain simply in Hinglish.`
-        }
+        { role: 'user', content: `Question: "${question}"\nData: ${JSON.stringify(queryResult.rows.slice(0, 5))}` },
       ],
-      max_tokens: 100,
+      max_tokens: 120,
       temperature: 0.7,
     });
 
@@ -657,7 +564,7 @@ Be conversational, highlight the most important insight first. Max 50 words. Use
       rowCount: queryResult.rowCount,
     };
 
-    cache.set(cacheKey, result, 300); // 5 min cache
+    cache.set(cacheKey, result, 300);
     res.json(result);
   } catch (error) {
     console.error('[AI] Analytics error:', error.message);
