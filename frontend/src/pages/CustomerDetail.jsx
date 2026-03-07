@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { customersAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { formatIndianCurrency, formatIndianDate } from '../utils/indianFormatters';
+import SmartReminder from '../components/SmartReminder';
 
 const TAB_OVERVIEW = 'overview';
 const TAB_SALES = 'sales';
@@ -96,11 +97,18 @@ const CustomerDetail = () => {
             {customer.contact_designation && ` · ${customer.contact_designation}`}
           </p>
         </div>
-        <span className={`ml-auto px-3 py-1 rounded-full text-sm font-medium ${
-          customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-        }`}>
-          {customer.status}
-        </span>
+        <div className="ml-auto flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {customer.status}
+          </span>
+          <SmartReminder
+            customerId={customer.id}
+            customerName={customer.company_name}
+            outstanding={total_outstanding}
+          />
+        </div>
       </div>
 
       {/* Summary Cards */}

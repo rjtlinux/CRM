@@ -106,6 +106,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       TENANTS_REGISTRY_PATH: /app/tenants-registry/registry.json
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:
       - ${TENANTS_DIR}/registry.json:/app/tenants-registry/registry.json:ro
 7    ports:

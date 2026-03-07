@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageSwitch from './LanguageSwitch';
 import MobileBottomNav from './MobileBottomNav';
+import VoiceInput from './VoiceInput';
+import AIChatbot from './AIChatbot';
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -43,8 +45,9 @@ const Layout = () => {
               <p className="text-xs text-gray-600 font-medium">Business CRM</p>
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 space-y-2">
             <LanguageSwitch />
+            <VoiceInput />
           </div>
         </div>
 
@@ -104,7 +107,8 @@ const Layout = () => {
           <div className="flex items-center gap-2">
             <img src="/buzeye-logo.png" alt="Buzeye" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <VoiceInput />
             <LanguageSwitch />
             <button
               onClick={handleLogout}
@@ -126,6 +130,9 @@ const Layout = () => {
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav />
       </main>
+
+      {/* AI Chatbot - floating, visible on all pages */}
+      <AIChatbot />
     </div>
   );
 };
