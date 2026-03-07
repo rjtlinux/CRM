@@ -36,8 +36,6 @@ const nextInvoiceNumber = async () => {
   return r.rows.length > 0 ? String(parseInt(r.rows[0].invoice_number) + 1) : '1';
 };
 
-// ─── 1. VOICE COMMAND — GPT-4o with Function Calling ────────────────────────
-
 // ─── WHISPER TRANSCRIPTION ───────────────────────────────────────────────────
 
 const transcribeAudio = async (fileBuffer, mimetype) => {
@@ -45,34 +43,32 @@ const transcribeAudio = async (fileBuffer, mimetype) => {
   const ext = mimetype.includes('webm') ? 'webm'
     : mimetype.includes('ogg') ? 'ogg'
     : mimetype.includes('mp4') ? 'mp4'
-    : mimetype.includes('wav') ? 'wav'
-    : 'webm';
+    : mimetype.includes('wav') ? 'wav' : 'webm';
 
   const audioFile = await toFile(fileBuffer, `audio.${ext}`, { type: mimetype });
   const result = await openai.audio.transcriptions.create({
     file: audioFile,
     model: 'whisper-1',
-    language: 'hi',            // hint: Hindi — Whisper auto-detects but this helps
     response_format: 'text',
   });
   return result.trim();
 };
 
-// ─── AI TOOLS ────────────────────────────────────────────────────────────────
+// ─── AI TOOLS (descriptions in English for better accuracy) ──────────────────
 
 const AI_TOOLS = [
   {
     type: 'function',
     function: {
       name: 'record_udhar',
-      description: 'Customer ko udhar/credit dena — maal ya service di aur payment baad mein milegi. Credit Book mein entry hoti hai.',
+      description: 'Record a credit/udhar entry when goods or services are given to a customer on credit. Payment will come later. This goes into the Credit Book (Udhar Khata).',
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer ka naam' },
-          amount: { type: 'number', description: 'Amount rupees mein (Hindi numbers bhi: paanch hazaar = 5000)' },
-          product: { type: 'string', description: 'Kya diya gaya — maal, cement, kapda, etc. (optional)' },
-          quantity: { type: 'number', description: 'Kitna diya (optional)' },
+          customer_name: { type: 'string', description: 'Name of the customer or company' },
+          amount: { type: 'number', description: 'Amount in Indian Rupees' },
+          product: { type: 'string', description: 'What was given — product or service description' },
+          quantity: { type: 'number', description: 'Quantity if applicable' },
         },
         required: ['customer_name', 'amount'],
       },
@@ -82,13 +78,13 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'create_sale',
-      description: 'Cash sale record karna — jab customer ne turant paise diye ho',
+      description: 'Record a completed cash sale where customer paid immediately.',
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string' },
-          amount: { type: 'number' },
-          product: { type: 'string', description: 'Kya becha (optional)' },
+          customer_name: { type: 'string', description: 'Customer or company name' },
+          amount: { type: 'number', description: 'Sale amount in Indian Rupees' },
+          product: { type: 'string', description: 'What was sold' },
         },
         required: ['customer_name', 'amount'],
       },
@@ -98,12 +94,12 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'record_payment',
-      description: 'Customer ne udhar ke paise waapis diye — payment receive karna',
+      description: 'Record a payment received from a customer against their outstanding udhar/credit balance.',
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string' },
-          amount: { type: 'number' },
+          customer_name: { type: 'string', description: 'Customer name' },
+          amount: { type: 'number', description: 'Payment amount in Rupees' },
         },
         required: ['customer_name', 'amount'],
       },
@@ -113,11 +109,11 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'check_balance',
-      description: 'Kisi customer ka outstanding udhar/balance check karna',
+      description: 'Check outstanding udhar/credit balance for a specific customer.',
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string' },
+          customer_name: { type: 'string', description: 'Customer name to check' },
         },
         required: ['customer_name'],
       },
@@ -127,11 +123,11 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'check_sales',
-      description: 'Aaj ya is mahine ki sales ka summary dekhna',
+      description: 'Get sales summary for today or this month — total count and amount.',
       parameters: {
         type: 'object',
         properties: {
-          period: { type: 'string', enum: ['today', 'month', 'week'] },
+          period: { type: 'string', enum: ['today', 'month', 'week'], description: 'Time period' },
         },
       },
     },
@@ -140,12 +136,12 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'create_customer',
-      description: 'Naya customer database mein add karna — sirf naam se, baaki details baad mein',
+      description: 'Add a new customer to the database. Only name is required — other details can be added later from the Customers page.',
       parameters: {
         type: 'object',
         properties: {
-          name: { type: 'string', description: 'Customer ya company ka naam' },
-          phone: { type: 'string', description: 'Phone number (optional)' },
+          name: { type: 'string', description: 'Customer or company name' },
+          phone: { type: 'string', description: 'Phone number if provided' },
         },
         required: ['name'],
       },
@@ -153,35 +149,39 @@ const AI_TOOLS = [
   },
 ];
 
-const VOICE_SYSTEM_PROMPT = `Tum Buzeye AI ho — ek bahut hi samajhdar aur friendly business assistant jo Indian chhote dukandaaron aur business owners ke saath kaam karta hai. Tum unka kaam aasaan banate ho.
+// ─── SYSTEM PROMPT — in English, let GPT naturally handle Hindi ──────────────
 
-Tumhari personality:
-- Bilkul ek trusted dost ki tarah baat karo — warm, helpful, casual
-- "Ho gaya!", "Perfect!", "Bilkul!", "Theek hai!" — yeh natural Hinglish use karo
-- Kabhi "I apologize" ya robotic English mat bolna
-- Chhota aur seedha jawab dena — max 2 sentences
+const VOICE_SYSTEM_PROMPT = `You are Buzeye AI — a smart, friendly business assistant built into a CRM app used by Indian small business owners (shopkeepers, traders, manufacturers).
 
-Tum yeh kaam kar sakte ho (tools hain tumhare paas):
-1. Udhar darj karna (Credit Book) — jab maal ya service di jaaye credit pe
-2. Cash sale record karna — jab turant payment ho
-3. Payment receive karna — jab customer ne udhar chukaya
-4. Balance check karna — customer ka kitna baaki hai
-5. Naya customer banana — sirf naam se, baaki details baad mein
+CRITICAL LANGUAGE RULE:
+- Always reply in the SAME language the user speaks to you.
+- If they speak Hindi, reply in natural Hindi. If Hinglish, reply in Hinglish. If English, reply in English.
+- Your Hindi should sound like a real person talking — natural, warm, conversational. NOT like Google Translate.
+- Use the ₹ symbol for all money amounts in Indian number format (e.g., ₹5,000 or ₹1,50,000).
 
-Zaroori rules:
-• Jo bhaasha user bole (Hindi/English/Hinglish), usi mein jawab do
-• Amounts mein hamesha ₹ sign lagao, Indian format (₹5,000)
-• Agar customer nahi mila: "Kya [naam] ko naya customer add kar doon?" — bas itna poochho
-• Agar koi info missing hai: sirf ek specific sawaal poochho
-• Jab kaam ho jaaye: clearly confirm karo kya hua
+YOUR PERSONALITY:
+- You're like a smart young employee who works at the shop and knows everything about the business.
+- Be genuinely helpful, warm, and efficient — like talking to a real person, not a machine.
+- Don't be overly formal or use phrases like "I apologize" or "Certainly!". Just talk naturally.
+- When confirming an action, be clear about what happened but keep it conversational.
 
-Hindi numbers (correctly samjho):
-sau=100, do sau=200, paanch sau=500
-ek hazaar=1,000, paanch hazaar=5,000, das hazaar=10,000
-bees hazaar=20,000, pachchees hazaar=25,000, pachaas hazaar=50,000
-ek lakh=1,00,000, dedh lakh=1,50,000, do lakh=2,00,000, paanch lakh=5,00,000`;
+YOUR CAPABILITIES (you have tools for these):
+1. Record udhar/credit (when goods are given on credit)
+2. Record a cash sale
+3. Record a payment received from a customer
+4. Check a customer's outstanding balance
+5. Show sales summary (today/month)
+6. Add a new customer
 
-// Execute a tool call and return result string for GPT
+CONVERSATION GUIDELINES:
+- If a customer is not found in the database, naturally ask if you should add them. Don't make it sound like an error.
+- If information is missing (like amount), ask for it naturally — the way a real person would.
+- After completing an action, confirm what you did clearly.
+- If you don't understand something, ask the user to rephrase — don't guess randomly.
+- You can handle follow-up questions in context (e.g., "uska balance bhi bata do" after recording udhar).`;
+
+// ─── Execute tool call ───────────────────────────────────────────────────────
+
 const executeTool = async (name, args, userId) => {
   switch (name) {
     case 'record_udhar': {
@@ -203,10 +203,8 @@ const executeTool = async (name, args, userId) => {
         [c.id]
       );
       return JSON.stringify({
-        status: 'success',
-        action: 'udhar_recorded',
-        customer: c.company_name,
-        amount: args.amount,
+        status: 'success', action: 'udhar_recorded',
+        customer: c.company_name, amount: args.amount,
         total_outstanding: parseFloat(outstanding.rows[0].total),
       });
     }
@@ -248,7 +246,7 @@ const executeTool = async (name, args, userId) => {
         const inv = await nextInvoiceNumber();
         await pool.query(
           `INSERT INTO sales (customer_id, amount, description, status, sale_date, invoice_number, created_by)
-           VALUES ($1, $2, 'Payment received (Voice entry)', 'completed', CURRENT_DATE, $3, $4)`,
+           VALUES ($1, $2, 'Payment received (Voice)', 'completed', CURRENT_DATE, $3, $4)`,
           [c.id, args.amount, inv, userId]
         );
       }
@@ -257,10 +255,8 @@ const executeTool = async (name, args, userId) => {
         [c.id]
       );
       return JSON.stringify({
-        status: 'success',
-        action: 'payment_recorded',
-        customer: c.company_name,
-        amount: args.amount,
+        status: 'success', action: 'payment_recorded',
+        customer: c.company_name, amount: args.amount,
         remaining_balance: parseFloat(remaining.rows[0].total),
       });
     }
@@ -296,13 +292,13 @@ const executeTool = async (name, args, userId) => {
       try {
         const existing = await findCustomer(args.name);
         if (existing.length) {
-          return JSON.stringify({ status: 'already_exists', customer: existing[0].company_name });
+          return JSON.stringify({ status: 'already_exists', customer: existing[0].company_name, id: existing[0].id });
         }
-        await pool.query(
-          `INSERT INTO customers (company_name, contact_person, status, created_by) VALUES ($1, $1, 'active', $2)`,
-          [args.name, userId]
+        const r = await pool.query(
+          `INSERT INTO customers (company_name, contact_person, phone, status, created_by) VALUES ($1, $1, $2, 'active', $3) RETURNING id`,
+          [args.name, args.phone || null, userId]
         );
-        return JSON.stringify({ status: 'success', action: 'customer_created', customer: args.name });
+        return JSON.stringify({ status: 'success', action: 'customer_created', customer: args.name, id: r.rows[0].id });
       } catch (e) {
         return JSON.stringify({ status: 'error', message: e.message });
       }
@@ -313,18 +309,18 @@ const executeTool = async (name, args, userId) => {
   }
 };
 
+// ─── VOICE COMMAND HANDLER ───────────────────────────────────────────────────
+
 const processVoiceCommand = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Parse messages from either JSON body or FormData string
     let clientMessages = [];
     try {
       const raw = req.body.messages;
-      clientMessages = raw ? JSON.parse(raw) : [];
+      clientMessages = typeof raw === 'string' ? JSON.parse(raw) : (raw || []);
     } catch { clientMessages = []; }
 
-    // ── Transcribe audio if provided, else use text ──
     let text = req.body.text || '';
     let transcript = null;
 
@@ -332,52 +328,46 @@ const processVoiceCommand = async (req, res) => {
       try {
         transcript = await transcribeAudio(req.file.buffer, req.file.mimetype || 'audio/webm');
         text = transcript;
-        console.log(`[AI Whisper] Transcribed: "${text}"`);
       } catch (whisperErr) {
-        console.error('[AI Whisper] Transcription error:', whisperErr.message);
-        return res.status(500).json({ response: 'Audio samajh nahi aaya. Dobara bolein ya type karein.', success: false });
+        console.error('[AI Whisper]', whisperErr.message);
+        return res.status(500).json({ response: 'Audio samajh nahi aaya. Dobara try karo ya type kar do.', success: false });
       }
     }
 
     if (!text?.trim()) {
-      return res.status(400).json({ response: 'Kuch suna nahi. Dobara bolein please.', success: false });
+      return res.status(400).json({ response: 'Kuch suna nahi, dobara bolo.', success: false });
     }
 
-    // Build conversation: system + history (user/assistant only) + new user message
     const messages = [
       { role: 'system', content: VOICE_SYSTEM_PROMPT },
-      ...clientMessages.slice(-10), // last 5 turns (user+assistant pairs)
+      ...clientMessages.slice(-12),
       { role: 'user', content: text },
     ];
 
-    // Agentic loop — GPT calls tools until it has a final text answer
-    for (let i = 0; i < 6; i++) {
+    // Agentic loop: GPT calls tools, gets results, eventually writes a response
+    for (let i = 0; i < 8; i++) {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages,
         tools: AI_TOOLS,
         tool_choice: 'auto',
-        temperature: 0.7,
-        max_tokens: 200,
+        temperature: 0.85,
+        max_tokens: 400,
       });
 
       const choice = completion.choices[0];
       messages.push(choice.message);
 
-      // No tool call — GPT has a final text response
       if (!choice.message.tool_calls?.length) {
         const responseText = choice.message.content;
-
-        // Return updated history (user/assistant text only, strip tool messages for client)
         const cleanHistory = messages
-          .slice(1) // remove system
+          .slice(1)
           .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-          .slice(-12);
+          .slice(-14);
 
         return res.json({ response: responseText, messages: cleanHistory, transcript, success: true });
       }
 
-      // Execute each tool call and add results
       for (const toolCall of choice.message.tool_calls) {
         const args = JSON.parse(toolCall.function.arguments);
         const result = await executeTool(toolCall.function.name, args, userId);
@@ -385,41 +375,44 @@ const processVoiceCommand = async (req, res) => {
       }
     }
 
-    return res.json({ response: 'Thoda aur detail mein batayein please — kya karna hai?', transcript, success: false });
+    return res.json({ response: 'Thoda aur detail mein batao — kya karna hai?', transcript, success: false });
   } catch (error) {
-    console.error('[AI] Voice command error:', error.message);
+    console.error('[AI] Voice error:', error.message);
     res.status(500).json({ response: safeError(error), success: false });
   }
 };
 
-// ─── 2. AI CHATBOT ───────────────────────────────────────────────────────────
+// ─── CHATBOT ─────────────────────────────────────────────────────────────────
 
 const getChatResponse = async (req, res) => {
   try {
     const { messages } = req.body;
     if (!messages?.length) return res.status(400).json({ error: 'Messages required' });
 
-    const systemPrompt = `Tu ek helpful CRM assistant hai jo Indian chhote business owners ki madad karta hai.
-Jo bhaasha user bole (Hindi/English/Hinglish), usi mein jawab de. Chhota aur kaam ki baat karo — max 3 sentences.
+    const systemPrompt = `You are Buzeye AI — a helpful assistant built into a CRM app for Indian small businesses.
 
-CRM features: Dashboard, Udhar Khata (Credit Book), Sales, Customers, Opportunities, Follow-ups, Proposals, Reports.
+LANGUAGE: Always match the user's language. If they write in Hindi, reply in natural Hindi. If English, reply in English. If Hinglish (mixed), reply in Hinglish. Your Hindi should sound completely natural — like a real person, not a translation.
 
-Common help:
-- Udhar darj karna → Udhar Khata → "+ Udhar Darj Karein"
-- Naya customer → Customers → "+ Add Customer"  
-- Sale record → Sales → "+ Add Sale"
-- Outstanding balance → Udhar Khata page
+YOUR ROLE: Help users navigate and use the CRM. You know about:
+- Dashboard: overview of revenue, costs, profit
+- Udhar Khata (Credit Book): track outstanding payments, record credit
+- Sales: record completed sales transactions
+- Customers: manage customer database
+- Opportunities: track potential deals in pipeline
+- Follow-ups: schedule and manage customer follow-ups
+- Proposals: create and send business proposals
+- Reports: detailed business analytics
 
-Hamesha ek aur cheez offer karo help ke liye.`;
+Be conversational, warm, and genuinely helpful. Give clear step-by-step guidance when needed. Don't be robotic.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
-        ...messages.slice(-10),
+        ...messages.slice(-12),
       ],
-      max_tokens: 200,
-      temperature: 0.7,
+      max_tokens: 400,
+      temperature: 0.85,
     });
 
     res.json({ response: completion.choices[0].message.content });
@@ -429,7 +422,7 @@ Hamesha ek aur cheez offer karo help ke liye.`;
   }
 };
 
-// ─── 3. SMART PAYMENT REMINDER ───────────────────────────────────────────────
+// ─── SMART PAYMENT REMINDER ─────────────────────────────────────────────────
 
 const generateSmartReminder = async (req, res) => {
   try {
@@ -452,7 +445,7 @@ const generateSmartReminder = async (req, res) => {
     const { total: amount, count: invoiceCount, oldest_date } = outstandingRes.rows[0];
 
     if (parseFloat(amount) === 0) {
-      return res.json({ message: `${customer.company_name} ka koi outstanding nahi hai!`, amount: 0 });
+      return res.json({ message: 'No outstanding balance!', amount: 0 });
     }
 
     const daysPending = oldest_date ? Math.floor((Date.now() - new Date(oldest_date)) / 86400000) : 0;
@@ -462,34 +455,36 @@ const generateSmartReminder = async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `Tu ek Indian chhote business owner ki taraf se WhatsApp payment reminder likhta hai.
-Hinglish mein likho — natural, respectful, aur tone amount + days ke hisaab se rakho:
-- Amount < ₹5,000: bahut casual aur dosti bhara
-- Amount ₹5,000-₹50,000: polite aur professional
-- Amount > ₹50,000: formal lekin izzat ke saath
-- 0-7 days: bahut gentle
-- 7-30 days: standard reminder  
-- 30+ days: thoda firm lekin respectful
-Max 80 words. ₹ symbol use karo. Gratitude se khatam karo. Emojis mat use karo.`,
+          content: `You write WhatsApp payment reminders on behalf of an Indian small business owner. Write in natural Hinglish.
+
+Tone rules based on amount and days:
+- Under ₹5,000: very casual and friendly
+- ₹5,000 to ₹50,000: polite and professional
+- Over ₹50,000: formal but respectful
+- Under 7 days: very gentle nudge
+- 7 to 30 days: standard reminder
+- Over 30 days: firmer but always respectful
+
+Keep it under 80 words. Use ₹ symbol. End with gratitude. No emojis. Sound like a real person wrote this, not a template.`,
         },
         {
           role: 'user',
           content: `Customer: ${customer.company_name} (${customer.contact_person})
 Outstanding: ₹${parseFloat(amount).toLocaleString('en-IN')}
 Pending bills: ${invoiceCount}
-Days since oldest: ${daysPending}
-WhatsApp reminder likho.`,
+Days since oldest bill: ${daysPending}
+Write a WhatsApp reminder.`,
         },
       ],
-      max_tokens: 150,
-      temperature: 0.8,
+      max_tokens: 200,
+      temperature: 0.9,
     });
 
     const message = completion.choices[0].message.content;
     const day = new Date().getDay();
-    let suggestedTime = 'Kal subah 10-11 baje';
-    if (day === 5) suggestedTime = 'Aaj shaam 4-5 baje (weekend se pehle)';
-    else if (day === 6 || day === 0) suggestedTime = 'Somvar subah 10-11 baje';
+    let suggestedTime = 'Tomorrow morning, 10-11 AM';
+    if (day === 5) suggestedTime = 'Today evening, 4-5 PM (before weekend)';
+    else if (day === 6 || day === 0) suggestedTime = 'Monday morning, 10-11 AM';
 
     const phone = customer.phone?.replace(/[^0-9]/g, '');
     const whatsappLink = phone
@@ -500,12 +495,12 @@ WhatsApp reminder likho.`,
     cache.set(cacheKey, result, 1800);
     res.json(result);
   } catch (error) {
-    console.error('[AI] Smart reminder error:', error.message);
+    console.error('[AI] Reminder error:', error.message);
     res.status(500).json({ error: safeError(error) });
   }
 };
 
-// ─── 4. DATA ENTRY SUGGESTIONS (DB-based, no OpenAI) ────────────────────────
+// ─── DATA ENTRY SUGGESTIONS (DB-only, no OpenAI cost) ────────────────────────
 
 const suggestDataEntry = async (req, res) => {
   try {
@@ -524,7 +519,6 @@ const suggestDataEntry = async (req, res) => {
         suggestions = r.rows.map(c => ({
           value: c.id, label: c.company_name,
           subtitle: `${c.contact_person}${c.phone ? ' · ' + c.phone : ''} · ${c.order_count} orders`,
-          confidence: parseInt(c.order_count) > 3 ? 'high' : 'medium',
         }));
         break;
       }
@@ -536,7 +530,7 @@ const suggestDataEntry = async (req, res) => {
           ? `WHERE customer_id=$1${partialInput ? ' AND LOWER(description) LIKE LOWER($2)' : ''}`
           : partialInput ? `WHERE LOWER(description) LIKE LOWER($1)` : '';
         const r = await pool.query(`SELECT description as product, COUNT(*) as freq FROM sales ${where} GROUP BY description ORDER BY freq DESC LIMIT 5`, params);
-        suggestions = r.rows.map(p => ({ value: p.product, label: p.product, subtitle: `${p.freq} times before` }));
+        suggestions = r.rows.map(p => ({ value: p.product, label: p.product, subtitle: `${p.freq} times` }));
         break;
       }
       case 'amount': {
@@ -547,8 +541,8 @@ const suggestDataEntry = async (req, res) => {
           );
           if (r.rows[0].avg) {
             suggestions = [
-              { value: r.rows[0].avg, label: `₹${parseInt(r.rows[0].avg).toLocaleString('en-IN')}`, subtitle: 'Usual amount', confidence: 'high' },
-              { value: r.rows[0].max, label: `₹${parseInt(r.rows[0].max).toLocaleString('en-IN')}`, subtitle: 'Highest amount', confidence: 'medium' },
+              { value: r.rows[0].avg, label: `₹${parseInt(r.rows[0].avg).toLocaleString('en-IN')}`, subtitle: 'Usual amount' },
+              { value: r.rows[0].max, label: `₹${parseInt(r.rows[0].max).toLocaleString('en-IN')}`, subtitle: 'Highest' },
             ];
           }
         }
@@ -557,12 +551,12 @@ const suggestDataEntry = async (req, res) => {
     }
     res.json({ suggestions });
   } catch (error) {
-    console.error('[AI] Suggestion error:', error.message);
+    console.error('[AI] Suggest error:', error.message);
     res.json({ suggestions: [] });
   }
 };
 
-// ─── 5. CONVERSATIONAL ANALYTICS ─────────────────────────────────────────────
+// ─── CONVERSATIONAL ANALYTICS ────────────────────────────────────────────────
 
 const conversationalAnalytics = async (req, res) => {
   try {
@@ -578,13 +572,13 @@ const conversationalAnalytics = async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `Convert natural language business questions to safe PostgreSQL SELECT queries for a CRM.
+          content: `Convert natural language business questions to safe PostgreSQL SELECT queries.
 
 Tables: customers(id,company_name,contact_person,phone,city,sector,status), sales(id,customer_id,amount,status,payment_method,description,sale_date), costs(id,amount,category,description,cost_date), opportunities(id,customer_id,value,pipeline_stage,closing_probability,expected_close_date)
 
-Rules: ONLY SELECT. For udhar/outstanding: WHERE payment_method='udhar' AND status='pending'. For revenue: WHERE status='completed'. LIMIT 10.
+Rules: ONLY SELECT. For udhar/outstanding: WHERE payment_method='udhar' AND status='pending'. For revenue: WHERE status='completed'. LIMIT 10 max.
 
-Respond ONLY in JSON: {"sql":"...","visualization":"bar|pie|line|number|table","title":"chart title"}`,
+Respond ONLY as JSON: {"sql":"...","visualization":"bar|pie|line|number|table","title":"..."}`,
         },
         { role: 'user', content: question },
       ],
@@ -604,12 +598,12 @@ Respond ONLY in JSON: {"sql":"...","visualization":"bar|pie|line|number|table","
       messages: [
         {
           role: 'system',
-          content: `Ek Indian chhote business owner ko unke business data ke baare mein simply samjhao. Hinglish mein, max 50 words. ₹ symbol use karo. Sabse important insight pehle batao.`,
+          content: `You explain business data to an Indian small business owner. Match the user's language (Hindi/English/Hinglish). Be clear, highlight the key insight first. Use ₹ for amounts.`,
         },
         { role: 'user', content: `Question: "${question}"\nData: ${JSON.stringify(queryResult.rows.slice(0, 5))}` },
       ],
-      max_tokens: 120,
-      temperature: 0.7,
+      max_tokens: 200,
+      temperature: 0.8,
     });
 
     const result = {
