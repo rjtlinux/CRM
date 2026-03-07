@@ -31,90 +31,172 @@ const findCustomer = async (name) => {
   return result.rows;
 };
 
-// ─── 1. VOICE / TEXT COMMAND ─────────────────────────────────────────────────
+// ─── 1. VOICE / TEXT COMMAND (multi-turn, GPT-4o) ───────────────────────────
+
+const VOICE_SYSTEM_PROMPT = `Tu ek dost hai jo Indian shopkeepers aur chhote business owners ka CRM assistant hai. Tu Hinglish mein baat karta hai - bilkul natural, jaise ek dost se baat karo.
+
+Tu in kaam kar sakta hai:
+1. RECORD_UDHAR - Jab koi customer ko credit/udhar diya gaya ho (maal diya, paise baad mein aayenge)
+2. CREATE_SALE - Jab koi cheez cash mein bech di ho
+3. RECORD_PAYMENT - Jab customer ne paise waapis diye
+4. CHECK_BALANCE - Kisi customer ka kitna baaki hai
+5. CHECK_SALES - Aaj ya is mahine ki sale ki jankari
+6. CREATE_CUSTOMER - Naya customer banana
+
+IMPORTANT RULES:
+- Hamesha JSON return karo
+- Agar sab info mil gayi toh:
+  {"type":"execute","intent":"RECORD_UDHAR","entities":{"customer_name":"Ramesh","amount":5000,"product":"cement"}}
+- Agar koi zaroori info missing hai toh pehle poochho:
+  {"type":"question","question":"Kitna amount hai?"}
+- Amount hamesha number mein extract karo (paanch hazaar = 5000, do lakh = 200000)
+- Customer name properly extract karo
+
+Hindi number examples:
+- "paanch hazaar" = 5000
+- "das hazaar" = 10000  
+- "ek lakh" = 100000
+- "do sau" = 200
+
+Agar user ka command samajh nahi aaya toh:
+{"type":"unclear","question":"Mujhe samajh nahi aaya. Kya aap dobara bata sakte hain? For example: 'Ramesh ko 5000 ka maal diya' ya 'Suresh se 3000 mile'"}`;
 
 const processVoiceCommand = async (req, res) => {
   try {
-    const { text, language = 'hi' } = req.body;
+    const { text, conversationHistory = [], pendingAction = null } = req.body;
     const userId = req.user.id;
 
     if (!text || text.trim().length < 2) {
-      return res.status(400).json({ error: 'Command text is required' });
+      return res.status(400).json({ error: 'Command text required' });
     }
 
-    // GPT-4o-mini: understand intent + extract entities
+    // ── Handle pending action (user is answering a follow-up question) ──
+    if (pendingAction) {
+      return await handlePendingAction(req, res, text, pendingAction, userId);
+    }
+
+    // ── Fresh command: let GPT-4o understand it ──
+    const messages = [
+      { role: 'system', content: VOICE_SYSTEM_PROMPT },
+      ...conversationHistory.slice(-6), // keep last 3 turns
+      { role: 'user', content: text },
+    ];
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a Hindi/English voice assistant for an Indian small business CRM.
-Extract the intent and entities from the user's command. Respond ONLY in JSON.
-
-Possible intents:
-- CREATE_SALE: User sold something to a customer
-- RECORD_UDHAR: User gave credit/udhar to someone (goods on credit, loan)
-- RECORD_PAYMENT: User received payment from customer
-- CHECK_BALANCE: User wants to know outstanding balance
-- CREATE_CUSTOMER: Add a new customer
-- CHECK_SALES: Ask about sales summary
-
-Extract entities:
-- customer_name (string)
-- amount (number, extract digits)
-- product (string, what was sold/given)
-- quantity (number)
-- date (string, if mentioned)
-
-Examples:
-"Ramesh ko 5000 ka maal diya" → {"intent":"RECORD_UDHAR","entities":{"customer_name":"Ramesh","amount":5000,"product":"maal"}}
-"Suresh ne 3000 rupay diye" → {"intent":"RECORD_PAYMENT","entities":{"customer_name":"Suresh","amount":3000}}
-"Ramesh ka balance kya hai" → {"intent":"CHECK_BALANCE","entities":{"customer_name":"Ramesh"}}
-"Aaj kitni sale hui" → {"intent":"CHECK_SALES","entities":{}}
-"500 cement bags sell kiya Raj Trading ko" → {"intent":"CREATE_SALE","entities":{"customer_name":"Raj Trading","amount":null,"product":"cement","quantity":500}}`
-        },
-        { role: 'user', content: text }
-      ],
+      model: 'gpt-4o',
+      messages,
       response_format: { type: 'json_object' },
-      temperature: 0.1,
+      temperature: 0.2,
     });
 
     const aiResponse = JSON.parse(completion.choices[0].message.content);
-    const { intent, entities = {} } = aiResponse;
 
-    // Execute intent
-    let result;
-    switch (intent) {
-      case 'RECORD_UDHAR':
-        result = await recordUdharFromVoice(entities, userId);
-        break;
-      case 'CREATE_SALE':
-        result = await createSaleFromVoice(entities, userId);
-        break;
-      case 'RECORD_PAYMENT':
-        result = await recordPaymentFromVoice(entities, userId);
-        break;
-      case 'CHECK_BALANCE':
-        result = await checkBalanceFromVoice(entities);
-        break;
-      case 'CHECK_SALES':
-        result = await checkSalesFromVoice(userId);
-        break;
-      default:
-        result = { error: true, message: 'Samajh nahi aaya. Phir se bolein ya type karein.' };
+    // GPT needs more info → send question back to user
+    if (aiResponse.type === 'question' || aiResponse.type === 'unclear') {
+      return res.json({
+        type: 'question',
+        response: aiResponse.question,
+        success: false,
+        conversationHistory: [
+          ...conversationHistory,
+          { role: 'user', content: text },
+          { role: 'assistant', content: JSON.stringify(aiResponse) },
+        ],
+      });
     }
 
-    // Generate friendly Hinglish response
-    const responseText = await generateHinglishResponse(intent, result, text);
+    // GPT has all info → execute the action
+    const { intent, entities = {} } = aiResponse;
+    return await executeAndRespond(res, intent, entities, userId, text);
 
-    res.json({ intent, entities, result, response: responseText, success: !result.error });
   } catch (error) {
     console.error('[AI] Voice command error:', error.message);
-    res.status(500).json({
-      error: true,
-      response: safeError(error),
+    res.status(500).json({ error: true, response: safeError(error) });
+  }
+};
+
+// ── Execute intent and handle "customer not found" with follow-up question ──
+const executeAndRespond = async (res, intent, entities, userId, originalText) => {
+  let result;
+  switch (intent) {
+    case 'RECORD_UDHAR':   result = await recordUdharFromVoice(entities, userId); break;
+    case 'CREATE_SALE':    result = await createSaleFromVoice(entities, userId); break;
+    case 'RECORD_PAYMENT': result = await recordPaymentFromVoice(entities, userId); break;
+    case 'CHECK_BALANCE':  result = await checkBalanceFromVoice(entities); break;
+    case 'CHECK_SALES':    result = await checkSalesFromVoice(userId); break;
+    case 'CREATE_CUSTOMER':
+      result = await createCustomerOnly(entities.customer_name, userId);
+      break;
+    default:
+      result = { error: true, customerNotFound: false, message: 'Yeh command mujhe samajh nahi aaya.' };
+  }
+
+  // Customer not in DB → ask user if they want to add
+  if (result.customerNotFound) {
+    const name = entities.customer_name;
+    return res.json({
+      type: 'question',
+      response: `"${name}" naam ka koi customer nahi mila database mein. Kya aap unhe abhi naya customer ke roop mein add karna chahenge? Sirf "haan" ya "yes" bolein.`,
+      success: false,
+      pendingAction: {
+        type: 'CREATE_CUSTOMER_THEN_EXECUTE',
+        customerName: name,
+        intent,
+        entities,
+      },
     });
   }
+
+  const responseText = await buildNaturalResponse(intent, result);
+  return res.json({
+    type: result.error ? 'error' : 'completed',
+    response: responseText,
+    result,
+    success: !result.error,
+    clearHistory: true,
+  });
+};
+
+// ── Handle follow-up answers (e.g., "yes" to create customer) ──
+const handlePendingAction = async (req, res, text, pendingAction, userId) => {
+  if (pendingAction.type === 'CREATE_CUSTOMER_THEN_EXECUTE') {
+    // Detect yes/no in Hindi/English
+    const affirmatives = ['haan', 'ha', 'yes', 'ji', 'bilkul', 'ok', 'okay', 'hna', 'yeah', 'yep', 'sure', 'kar do', 'add karo', 'add kar'];
+    const isYes = affirmatives.some(w => text.toLowerCase().includes(w));
+
+    if (!isYes) {
+      return res.json({
+        type: 'completed',
+        response: 'Theek hai, koi baat nahi! Koi aur kaam ho toh batao.',
+        success: false,
+        clearHistory: true,
+      });
+    }
+
+    // Create the customer (name only, user will fill rest later)
+    const name = pendingAction.customerName;
+    await createCustomerOnly(name, userId);
+
+    // Now execute the original intended action
+    const result = await (async () => {
+      switch (pendingAction.intent) {
+        case 'RECORD_UDHAR':   return recordUdharFromVoice(pendingAction.entities, userId);
+        case 'CREATE_SALE':    return createSaleFromVoice(pendingAction.entities, userId);
+        case 'RECORD_PAYMENT': return recordPaymentFromVoice(pendingAction.entities, userId);
+        default:               return { success: true, type: 'customer_created' };
+      }
+    })();
+
+    const actionMsg = await buildNaturalResponse(pendingAction.intent, result);
+    return res.json({
+      type: 'completed',
+      response: `"${name}" ko naya customer ke roop mein add kar diya! ${actionMsg} Baaki details jaise phone, address aap Customers page se kabhi bhi add kar sakte hain.`,
+      success: true,
+      clearHistory: true,
+    });
+  }
+
+  return res.json({ type: 'completed', response: 'Koi pending kaam nahi mila.', clearHistory: true });
 };
 
 const recordUdharFromVoice = async (entities, userId) => {
@@ -122,7 +204,7 @@ const recordUdharFromVoice = async (entities, userId) => {
   if (!entities.amount) return { error: true, message: 'Amount batayein.' };
 
   const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, message: `"${entities.customer_name}" naam ka customer nahi mila. Pehle customer banayein.` };
+  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
 
   const customer = customers[0];
 
@@ -151,7 +233,7 @@ const createSaleFromVoice = async (entities, userId) => {
   if (!entities.amount) return { error: true, message: 'Amount batayein.' };
 
   const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
+  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
 
   const customer = customers[0];
   const desc = entities.product ? `${entities.product}${entities.quantity ? ` - ${entities.quantity} units` : ''} (Voice entry)` : 'Voice entry';
@@ -173,7 +255,7 @@ const recordPaymentFromVoice = async (entities, userId) => {
   if (!entities.amount) return { error: true, message: 'Amount batayein.' };
 
   const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
+  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
 
   const customer = customers[0];
 
@@ -215,7 +297,7 @@ const checkBalanceFromVoice = async (entities) => {
   if (!entities.customer_name) return { error: true, message: 'Customer ka naam batayein.' };
 
   const customers = await findCustomer(entities.customer_name);
-  if (customers.length === 0) return { error: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
+  if (customers.length === 0) return { error: true, customerNotFound: true, message: `"${entities.customer_name}" naam ka customer nahi mila.` };
 
   const customer = customers[0];
   const result = await pool.query(
@@ -236,35 +318,48 @@ const checkSalesFromVoice = async (userId) => {
   return { success: true, type: 'sales_summary', today: today.rows[0], month: month.rows[0] };
 };
 
-const generateHinglishResponse = async (intent, result, originalText) => {
-  if (result.error) return result.message;
+const createCustomerOnly = async (name, userId) => {
+  try {
+    await pool.query(
+      `INSERT INTO customers (company_name, contact_person, status, created_by)
+       VALUES ($1, $1, 'active', $2)
+       ON CONFLICT DO NOTHING`,
+      [name, userId]
+    );
+    return { success: true, type: 'customer_created', customer: name };
+  } catch (e) {
+    return { error: true, message: e.message };
+  }
+};
 
-  const contextMap = {
-    'RECORD_UDHAR': `Udhar recorded: ${result.customer} ko ₹${result.amount}. Total outstanding: ₹${result.total_outstanding}`,
-    'CREATE_SALE': `Sale created: ${result.customer} ke liye ₹${result.amount}`,
-    'RECORD_PAYMENT': `Payment recorded: ${result.customer} se ₹${result.amount}. Remaining balance: ₹${result.remaining_balance}`,
-    'CHECK_BALANCE': `Balance for ${result.customer}: ₹${result.outstanding}`,
-    'CHECK_SALES': `Today: ${result.today?.count} sales, ₹${result.today?.total}. This month: ${result.month?.count} sales, ₹${result.month?.total}`,
+const buildNaturalResponse = async (intent, result) => {
+  if (result?.error) return result.message || 'Kuch gadbad ho gayi.';
+
+  const facts = {
+    RECORD_UDHAR:    `${result.customer} ko ₹${parseInt(result.amount).toLocaleString('en-IN')} ka udhar darj ho gaya. Ab unka total outstanding ₹${parseInt(result.total_outstanding).toLocaleString('en-IN')} hai.`,
+    CREATE_SALE:     `${result.customer} ke naam ₹${parseInt(result.amount).toLocaleString('en-IN')} ki sale record ho gayi.`,
+    RECORD_PAYMENT:  `${result.customer} se ₹${parseInt(result.amount).toLocaleString('en-IN')} ki payment mil gayi. Ab unka baaki balance ₹${parseInt(result.remaining_balance).toLocaleString('en-IN')} hai.`,
+    CHECK_BALANCE:   `${result.customer} ka outstanding ₹${parseInt(result.outstanding).toLocaleString('en-IN')} hai.`,
+    CHECK_SALES:     `Aaj ${result.today?.count} sales hui hain, total ₹${parseInt(result.today?.total || 0).toLocaleString('en-IN')}. Is mahine mein ${result.month?.count} sales, ₹${parseInt(result.month?.total || 0).toLocaleString('en-IN')}.`,
+    CREATE_CUSTOMER: `${result.customer} ko naya customer ke roop mein add kar diya gaya.`,
   };
 
   try {
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `You are a friendly Hindi/English (Hinglish) CRM assistant for Indian shopkeepers.
-Generate a short, natural, conversational response in Hinglish (max 25 words).
-Use rupee symbol ₹ for amounts. Be warm and helpful. No emojis.`
+          content: `Tu ek friendly Indian shopkeeper CRM assistant hai. Diya gaya fact ek natural, warm Hinglish sentence mein bolo. Max 2 sentences. Bilkul robotic mat lagna - dost ki tarah bolo. ₹ symbol use karo amounts ke liye.`,
         },
-        { role: 'user', content: `Context: ${contextMap[intent] || JSON.stringify(result)}. Generate response.` }
+        { role: 'user', content: facts[intent] || JSON.stringify(result) },
       ],
-      max_tokens: 60,
-      temperature: 0.7,
+      max_tokens: 80,
+      temperature: 0.8,
     });
     return completion.choices[0].message.content;
   } catch {
-    return contextMap[intent] || 'Done!';
+    return facts[intent] || 'Kaam ho gaya!';
   }
 };
 

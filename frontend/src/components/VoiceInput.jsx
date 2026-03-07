@@ -3,25 +3,33 @@ import api from '../services/api';
 
 const VoiceInput = ({ onResult, fullWidth = false }) => {
   const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [textInput, setTextInput] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState('');
   const [showPanel, setShowPanel] = useState(false);
-  const [panelPos, setPanelPos] = useState({ top: 56, right: 16 });
+  const [panelPos, setPanelPos] = useState({});
+  const [textInput, setTextInput] = useState('');
+
+  // Conversation state
+  const [messages, setMessages] = useState([]); // { role: 'user'|'ai', text: string, status: 'ok'|'question'|'error' }
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [pendingAction, setPendingAction] = useState(null); // waiting for yes/no
+
   const recognitionRef = useRef(null);
   const buttonRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const browserSupportsVoice = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+  const browserSupportsVoice = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   useEffect(() => {
     if (!showPanel) return;
     const handleClickOutside = (e) => {
-      if (buttonRef.current && !buttonRef.current.contains(e.target)) {
-        const panel = document.getElementById('voice-input-panel');
-        if (panel && !panel.contains(e.target)) setShowPanel(false);
-      }
+      if (buttonRef.current?.contains(e.target)) return;
+      const panel = document.getElementById('voice-input-panel');
+      if (panel && !panel.contains(e.target)) setShowPanel(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -30,14 +38,11 @@ const VoiceInput = ({ onResult, fullWidth = false }) => {
   const openPanel = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const panelWidth = 320;
+      const panelWidth = 340;
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       let top = rect.bottom + 8;
-      // If panel would overflow bottom, open upward
-      if (top + 520 > viewportHeight) top = Math.max(8, rect.top - 520);
-      // If button is on left half (e.g. sidebar), open panel to the right of button
-      // If button is on right half (e.g. mobile header), open panel to the left of button
+      if (top + 540 > viewportHeight) top = Math.max(8, rect.top - 540);
       let pos;
       if (rect.left < viewportWidth / 2) {
         const left = Math.min(rect.right + 8, viewportWidth - panelWidth - 8);
@@ -49,44 +54,31 @@ const VoiceInput = ({ onResult, fullWidth = false }) => {
       setPanelPos(pos);
     }
     setShowPanel(prev => !prev);
+    setTimeout(() => inputRef.current?.focus(), 150);
   };
 
   const startListening = () => {
-    setError('');
-    setResponse(null);
-    setTranscript('');
-
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
-
     recognition.lang = 'hi-IN';
-    recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
       const text = event.results[0][0].transcript;
-      setTranscript(text);
-      if (event.results[0].isFinal) {
-        setIsListening(false);
-        handleCommand(text);
-      }
+      setIsListening(false);
+      handleSend(text);
     };
-
     recognition.onerror = (e) => {
       setIsListening(false);
       if (e.error === 'not-allowed') {
-        setError('Microphone permission denied. Please allow mic access.');
-      } else if (e.error === 'no-speech') {
-        setError('Koi awaaz nahi aayi. Phir se try karein.');
-      } else {
-        setError('Voice recognition error. Text box use karein.');
+        addMessage('ai', 'Mic permission nahi mili. Please allow microphone access.', 'error');
+      } else if (e.error !== 'no-speech') {
+        addMessage('ai', 'Awaaz nahi sun paya. Phir se try karein ya type karein.', 'error');
       }
     };
-
     recognition.onend = () => setIsListening(false);
-
     recognition.start();
     setIsListening(true);
   };
@@ -96,173 +88,235 @@ const VoiceInput = ({ onResult, fullWidth = false }) => {
     setIsListening(false);
   };
 
-  const handleCommand = async (text) => {
-    if (!text.trim()) return;
+  const addMessage = (role, text, status = 'ok') => {
+    setMessages(prev => [...prev, { role, text, status }]);
+  };
+
+  const handleSend = async (text) => {
+    const trimmed = (text || textInput).trim();
+    if (!trimmed) return;
+    setTextInput('');
+    addMessage('user', trimmed);
     setProcessing(true);
-    setError('');
-    setResponse(null);
+
     try {
-      const res = await api.post('/ai/voice-command', { text, language: 'hi' });
-      setResponse(res.data);
-      onResult?.(res.data);
-      // Auto-speak response if browser supports it
-      if (res.data.response && 'speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(res.data.response);
+      const res = await api.post('/ai/voice-command', {
+        text: trimmed,
+        conversationHistory,
+        pendingAction,
+      });
+
+      const data = res.data;
+
+      // Update conversation history for multi-turn
+      if (data.conversationHistory) {
+        setConversationHistory(data.conversationHistory);
+      }
+
+      // Store pending action if AI is asking a follow-up question
+      if (data.pendingAction) {
+        setPendingAction(data.pendingAction);
+      } else if (data.clearHistory) {
+        setConversationHistory([]);
+        setPendingAction(null);
+      }
+
+      const status = data.type === 'question' ? 'question' : data.success ? 'ok' : 'error';
+      addMessage('ai', data.response, status);
+
+      // Notify parent on successful action
+      if (data.success && onResult) onResult(data);
+
+      // Auto-speak response
+      if (data.response && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(data.response);
         utterance.lang = 'hi-IN';
-        utterance.rate = 0.9;
+        utterance.rate = 0.95;
+        utterance.pitch = 1.05;
         window.speechSynthesis.speak(utterance);
       }
     } catch (e) {
-      setError(e.response?.data?.response || 'Kuch gadbad ho gayi. Dobara try karein.');
+      addMessage('ai', 'Network error aaya. Dobara try karein.', 'error');
     } finally {
       setProcessing(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
-  const handleTextSubmit = (e) => {
-    e.preventDefault();
-    if (!textInput.trim()) return;
-    setTranscript(textInput);
-    handleCommand(textInput);
-    setTextInput('');
+  const handleReset = () => {
+    setMessages([]);
+    setConversationHistory([]);
+    setPendingAction(null);
+    window.speechSynthesis?.cancel();
   };
 
-  const getResultDisplay = () => {
-    if (!response?.result) return null;
-    const r = response.result;
-    if (r.type === 'balance') return `${r.customer}: ₹${parseFloat(r.outstanding).toLocaleString('en-IN')} outstanding`;
-    if (r.type === 'udhar') return `Udhar recorded ✓ | Total: ₹${parseFloat(r.total_outstanding).toLocaleString('en-IN')}`;
-    if (r.type === 'sale') return `Sale recorded ✓ | ₹${parseFloat(r.amount).toLocaleString('en-IN')}`;
-    if (r.type === 'payment') return `Payment recorded ✓ | Remaining: ₹${parseFloat(r.remaining_balance).toLocaleString('en-IN')}`;
-    if (r.type === 'sales_summary') return `Today: ₹${parseFloat(r.today?.total || 0).toLocaleString('en-IN')} | Month: ₹${parseFloat(r.month?.total || 0).toLocaleString('en-IN')}`;
-    return null;
-  };
+  const examples = [
+    'Ramesh ko 5000 ka maal diya',
+    'Suresh ne 3000 rupay diye',
+    'Ramesh ka balance kya hai',
+    'Aaj kitni sale hui',
+  ];
 
   return (
     <div className="relative">
-      {/* Mic Button */}
+      {/* Trigger Button */}
       <button
         ref={buttonRef}
         onClick={openPanel}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
           fullWidth ? 'w-full justify-center' : ''
-        } ${
-          isListening
-            ? 'bg-red-500 text-white animate-pulse'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
-        }`}
+        } ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
         title="AI Voice Assistant"
       >
-        <span className="text-base">{isListening ? '⏹' : '🎤'}</span>
-        <span className={fullWidth ? '' : 'hidden sm:inline'}>
-          {isListening ? 'Listening...' : 'AI Assistant'}
-        </span>
+        <span className="text-base">🎤</span>
+        <span className={fullWidth ? '' : 'hidden sm:inline'}>AI Assistant</span>
       </button>
 
-      {/* Panel - fixed so it escapes any parent overflow */}
+      {/* Floating Panel */}
       {showPanel && (
         <div
           id="voice-input-panel"
-          className="fixed z-[200] w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
-          style={panelPos}
+          className="fixed z-[200] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+          style={{ ...panelPos, width: 340, maxHeight: 520 }}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 flex justify-between items-center">
-            <div>
-              <div className="font-semibold text-sm">🤖 AI Voice Assistant</div>
-              <div className="text-xs opacity-80">Hindi / English / Hinglish</div>
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-base">🤖</div>
+              <div>
+                <div className="font-semibold text-sm">AI Voice Assistant</div>
+                <div className="text-xs opacity-75">Hindi · English · Hinglish</div>
+              </div>
             </div>
-            <button onClick={() => setShowPanel(false)} className="text-white hover:text-gray-200 text-lg">×</button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={handleReset}
+                  className="text-white opacity-70 hover:opacity-100 text-xs px-2 py-1 rounded hover:bg-white hover:bg-opacity-20 transition-all"
+                  title="New conversation"
+                >
+                  New
+                </button>
+              )}
+              <button onClick={() => setShowPanel(false)} className="text-white opacity-70 hover:opacity-100 text-xl leading-none px-1">×</button>
+            </div>
           </div>
 
-          <div className="p-4 space-y-3">
-            {/* Examples */}
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
-              <div className="font-medium text-gray-700 mb-1">Try saying:</div>
-              {[
-                '"Ramesh ko 5000 ka maal diya"',
-                '"Suresh ne 3000 rupay diye"',
-                '"Ramesh ka balance kya hai"',
-                '"Aaj kitni sale hui"',
-              ].map((ex) => (
-                <div
-                  key={ex}
-                  onClick={() => { setTextInput(ex.replace(/"/g, '')); }}
-                  className="cursor-pointer hover:text-blue-600 transition-colors"
-                >
-                  {ex}
-                </div>
-              ))}
-            </div>
-
-            {/* Voice Button */}
-            {browserSupportsVoice && (
-              <button
-                onClick={isListening ? stopListening : startListening}
-                disabled={processing}
-                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
-                  isListening
-                    ? 'bg-red-500 text-white animate-pulse'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {isListening ? '⏹ Stop Listening' : '🎤 Bolein (Click to Speak)'}
-              </button>
-            )}
-
-            {/* Transcript display */}
-            {transcript && (
-              <div className="bg-blue-50 rounded-lg p-2 text-sm text-blue-800">
-                <span className="font-medium">Aap: </span>{transcript}
+          {/* Messages / Initial State */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-50 min-h-0">
+            {messages.length === 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500 font-medium">Bolein ya type karein:</p>
+                {examples.map(ex => (
+                  <button
+                    key={ex}
+                    onClick={() => handleSend(ex)}
+                    disabled={processing}
+                    className="w-full text-left text-xs bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all disabled:opacity-50"
+                  >
+                    "{ex}"
+                  </button>
+                ))}
               </div>
-            )}
-
-            {/* Text input fallback */}
-            <form onSubmit={handleTextSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Ya type karein..."
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={processing}
-              />
-              <button
-                type="submit"
-                disabled={processing || !textInput.trim()}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm disabled:opacity-50"
-              >
-                {processing ? '⏳' : '→'}
-              </button>
-            </form>
-
-            {/* Processing */}
-            {processing && (
-              <div className="text-center text-sm text-gray-500 py-2">
-                <div className="inline-block animate-spin mr-2">⏳</div>
-                AI process kar raha hai...
-              </div>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            {/* Response */}
-            {response && !error && (
-              <div className={`rounded-lg p-3 text-sm ${response.success ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
-                <div className="font-semibold mb-1 text-gray-800">
-                  {response.success ? '✅' : '⚠️'} AI:
-                </div>
-                <div className="text-gray-700">{response.response}</div>
-                {getResultDisplay() && (
-                  <div className="mt-2 text-xs font-medium text-green-700 bg-green-100 rounded px-2 py-1">
-                    {getResultDisplay()}
+            ) : (
+              messages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'ai' && (
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-[10px] mr-2 mt-1 flex-shrink-0">
+                      AI
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-blue-600 text-white rounded-br-sm'
+                        : msg.status === 'question'
+                        ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-bl-sm'
+                        : msg.status === 'error'
+                        ? 'bg-red-50 border border-red-200 text-red-800 rounded-bl-sm'
+                        : 'bg-white border border-gray-100 shadow-sm text-gray-800 rounded-bl-sm'
+                    }`}
+                  >
+                    {msg.status === 'question' && <span className="text-amber-600 mr-1">❓</span>}
+                    {msg.status === 'ok' && msg.role === 'ai' && <span className="text-green-600 mr-1">✅</span>}
+                    {msg.text}
                   </div>
-                )}
+                </div>
+              ))
+            )}
+            {processing && (
+              <div className="flex justify-start">
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white text-[10px] mr-2 flex-shrink-0">AI</div>
+                <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                  <div className="flex gap-1 items-center">
+                    {[0, 150, 300].map(d => (
+                      <div key={d} className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick yes/no when pending action */}
+          {pendingAction && !processing && (
+            <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => handleSend('haan')}
+                className="flex-1 bg-green-600 text-white text-sm py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                ✓ Haan, Add Karo
+              </button>
+              <button
+                onClick={() => handleSend('nahi')}
+                className="flex-1 bg-gray-200 text-gray-700 text-sm py-2 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              >
+                ✗ Nahi
+              </button>
+            </div>
+          )}
+
+          {/* Input Row */}
+          <div className="px-3 py-3 bg-white border-t border-gray-100 flex-shrink-0">
+            <div className="flex gap-2 items-center">
+              {browserSupportsVoice && (
+                <button
+                  onClick={isListening ? stopListening : startListening}
+                  disabled={processing}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                    isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                  } disabled:opacity-50`}
+                  title={isListening ? 'Rokein' : 'Bolein'}
+                >
+                  {isListening ? '⏹' : '🎤'}
+                </button>
+              )}
+              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex-1 flex gap-2">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={textInput}
+                  onChange={e => setTextInput(e.target.value)}
+                  placeholder={pendingAction ? 'Haan ya nahi...' : 'Ya type karein...'}
+                  className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={processing}
+                />
+                <button
+                  type="submit"
+                  disabled={processing || !textInput.trim()}
+                  className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center disabled:opacity-40 hover:bg-blue-700 transition-colors flex-shrink-0"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </button>
+              </form>
+            </div>
+            {isListening && (
+              <div className="text-center text-xs text-red-500 mt-2 animate-pulse">
+                ● Listening... (Hindi/English/Hinglish)
               </div>
             )}
           </div>
