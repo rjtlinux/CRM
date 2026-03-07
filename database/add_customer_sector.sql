@@ -19,8 +19,11 @@ UPDATE customers SET sector = 'Manufacturing' WHERE company_name LIKE '%Manufact
 UPDATE customers SET sector = 'Finance' WHERE company_name LIKE '%Financial%' OR company_name LIKE '%Bank%';
 UPDATE customers SET sector = 'Retail' WHERE company_name LIKE '%Retail%' OR company_name LIKE '%Store%';
 
--- Make fields NOT NULL (except optional ones)
+-- Make company_name required, rest optional (AI can add customer by name only)
 ALTER TABLE customers ALTER COLUMN company_name SET NOT NULL;
-ALTER TABLE customers ALTER COLUMN contact_person SET NOT NULL;
-ALTER TABLE customers ALTER COLUMN email SET NOT NULL;
-ALTER TABLE customers ALTER COLUMN phone SET NOT NULL;
+ALTER TABLE customers ALTER COLUMN contact_person DROP NOT NULL;
+ALTER TABLE customers ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE customers ALTER COLUMN phone DROP NOT NULL;
+ALTER TABLE customers ALTER COLUMN contact_person SET DEFAULT '';
+ALTER TABLE customers ALTER COLUMN email SET DEFAULT '';
+ALTER TABLE customers ALTER COLUMN phone SET DEFAULT '';

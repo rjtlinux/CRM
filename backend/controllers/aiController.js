@@ -137,12 +137,11 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'create_customer',
-      description: 'Add a new customer to the database. Only name is required — other details can be added later from the Customers page.',
+      description: 'Add a new customer to the database using ONLY their name. Do NOT ask for phone, email, or any other details — the user will fill those in later from the Customers page.',
       parameters: {
         type: 'object',
         properties: {
-          name: { type: 'string', description: 'Customer or company name' },
-          phone: { type: 'string', description: 'Phone number if provided' },
+          name: { type: 'string', description: 'Customer or company name — this is the only thing needed' },
         },
         required: ['name'],
       },
@@ -176,6 +175,7 @@ YOUR CAPABILITIES (you have tools for these):
 
 CONVERSATION GUIDELINES:
 - If a customer is not found in the database, naturally ask if you should add them. Don't make it sound like an error.
+- When adding a new customer, ONLY use their name. NEVER ask for phone number, email, address or any other details. Just add the name and tell the user they can fill in the rest from the Customers page whenever they want.
 - If information is missing (like amount), ask for it naturally — the way a real person would.
 - After completing an action, confirm what you did clearly.
 - If you don't understand something, ask the user to rephrase — don't guess randomly.
@@ -296,10 +296,10 @@ const executeTool = async (name, args, userId) => {
           return JSON.stringify({ status: 'already_exists', customer: existing[0].company_name, id: existing[0].id });
         }
         const r = await pool.query(
-          `INSERT INTO customers (company_name, contact_person, phone, status, created_by) VALUES ($1, $1, $2, 'active', $3) RETURNING id`,
-          [args.name, args.phone || null, userId]
+          `INSERT INTO customers (company_name, status, created_by) VALUES ($1, 'active', $2) RETURNING id`,
+          [args.name, userId]
         );
-        return JSON.stringify({ status: 'success', action: 'customer_created', customer: args.name, id: r.rows[0].id });
+        return JSON.stringify({ status: 'success', action: 'customer_created', customer: args.name, id: r.rows[0].id, note: 'Customer added with name only. User should add phone, email and other details from Customers page when they have time.' });
       } catch (e) {
         return JSON.stringify({ status: 'error', message: e.message });
       }
