@@ -49,6 +49,7 @@ const transcribeAudio = async (fileBuffer, mimetype) => {
   const result = await openai.audio.transcriptions.create({
     file: audioFile,
     model: 'whisper-1',
+    language: 'hi',
     response_format: 'text',
   });
   return result.trim();
@@ -360,9 +361,16 @@ const processVoiceCommand = async (req, res) => {
 
       if (!choice.message.tool_calls?.length) {
         const responseText = choice.message.content;
+        // Only keep user and assistant TEXT messages (no tool_calls, no tool responses)
+        // Strip tool_calls from assistant messages so they don't break the next API call
         const cleanHistory = messages
           .slice(1)
-          .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+          .filter(m => {
+            if (m.role === 'user') return true;
+            if (m.role === 'assistant' && typeof m.content === 'string' && !m.tool_calls?.length) return true;
+            return false;
+          })
+          .map(m => ({ role: m.role, content: m.content }))
           .slice(-14);
 
         return res.json({ response: responseText, messages: cleanHistory, transcript, success: true });
