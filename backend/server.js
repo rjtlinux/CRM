@@ -81,13 +81,10 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Global error handler
+// Global error handler - never expose stack traces or env vars in production
 app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
-  res.status(500).json({ 
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+  console.error('Global error:', err.message);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Start server

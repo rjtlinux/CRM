@@ -2,8 +2,21 @@ const OpenAI = require('openai');
 const NodeCache = require('node-cache');
 const pool = require('../config/database');
 
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('[AI] OPENAI_API_KEY not set - AI features will be unavailable');
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const cache = new NodeCache({ stdTTL: 3600 }); // 1 hour cache
+
+// Sanitize error before sending to client — never expose internal details or env vars
+const safeError = (err) => {
+  const msg = err?.message || '';
+  if (msg.includes('quota') || msg.includes('429')) return 'AI service quota exceeded. Please try again later.';
+  if (msg.includes('401') || msg.includes('auth')) return 'AI service configuration error.';
+  if (msg.includes('network') || msg.includes('ECONNREFUSED')) return 'Could not reach AI service. Check connection.';
+  return 'AI feature temporarily unavailable. Please try again.';
+};
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -96,10 +109,10 @@ Examples:
 
     res.json({ intent, entities, result, response: responseText, success: !result.error });
   } catch (error) {
-    console.error('Voice command error:', error);
+    console.error('[AI] Voice command error:', error.message);
     res.status(500).json({
       error: true,
-      response: 'Kuch gadbad ho gayi. Please dobara try karein.',
+      response: safeError(error),
     });
   }
 };
@@ -296,8 +309,8 @@ Always end with: "Aur kuch help chahiye?" (if Hindi) or "Need help with anything
 
     res.json({ response: completion.choices[0].message.content });
   } catch (error) {
-    console.error('Chat error:', error);
-    res.status(500).json({ response: 'Abhi chatbot available nahi hai. Thodi der baad try karein.' });
+    console.error('[AI] Chat error:', error.message);
+    res.status(500).json({ response: safeError(error) });
   }
 };
 
@@ -391,8 +404,8 @@ Generate reminder message.`
     cache.set(cacheKey, result, 1800); // cache 30 min
     res.json(result);
   } catch (error) {
-    console.error('Smart reminder error:', error);
-    res.status(500).json({ error: 'Failed to generate reminder' });
+    console.error('[AI] Smart reminder error:', error.message);
+    res.status(500).json({ error: safeError(error) });
   }
 };
 
@@ -468,7 +481,7 @@ const suggestDataEntry = async (req, res) => {
 
     res.json({ suggestions });
   } catch (error) {
-    console.error('Suggestion error:', error);
+    console.error('[AI] Suggestion error:', error.message);
     res.json({ suggestions: [] });
   }
 };
@@ -552,8 +565,8 @@ Be conversational, highlight the most important insight first. Max 50 words. Use
     cache.set(cacheKey, result, 300); // 5 min cache
     res.json(result);
   } catch (error) {
-    console.error('Analytics error:', error);
-    res.status(500).json({ error: 'Abhi ye feature available nahi hai. Dobara try karein.' });
+    console.error('[AI] Analytics error:', error.message);
+    res.status(500).json({ error: safeError(error) });
   }
 };
 

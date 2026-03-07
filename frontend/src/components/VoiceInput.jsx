@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
-import { formatIndianCurrency } from '../utils/indianFormatters';
 
 const VoiceInput = ({ onResult }) => {
   const [isListening, setIsListening] = useState(false);
@@ -10,9 +9,36 @@ const VoiceInput = ({ onResult }) => {
   const [response, setResponse] = useState(null);
   const [error, setError] = useState('');
   const [showPanel, setShowPanel] = useState(false);
+  const [panelPos, setPanelPos] = useState({ top: 56, right: 16 });
   const recognitionRef = useRef(null);
+  const buttonRef = useRef(null);
 
   const browserSupportsVoice = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+
+  useEffect(() => {
+    if (!showPanel) return;
+    const handleClickOutside = (e) => {
+      if (buttonRef.current && !buttonRef.current.contains(e.target)) {
+        const panel = document.getElementById('voice-input-panel');
+        if (panel && !panel.contains(e.target)) setShowPanel(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPanel]);
+
+  const openPanel = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const panelWidth = 320;
+      const viewportWidth = window.innerWidth;
+      // Position panel below button, right-aligned but never off-screen
+      let right = viewportWidth - rect.right;
+      if (right < 8) right = 8;
+      setPanelPos({ top: rect.bottom + 8, right });
+    }
+    setShowPanel(prev => !prev);
+  };
 
   const startListening = () => {
     setError('');
@@ -105,7 +131,8 @@ const VoiceInput = ({ onResult }) => {
     <div className="relative">
       {/* Mic Button */}
       <button
-        onClick={() => setShowPanel(!showPanel)}
+        ref={buttonRef}
+        onClick={openPanel}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
           isListening
             ? 'bg-red-500 text-white animate-pulse'
@@ -117,9 +144,13 @@ const VoiceInput = ({ onResult }) => {
         <span className="hidden sm:inline">{isListening ? 'Listening...' : 'AI Assistant'}</span>
       </button>
 
-      {/* Panel */}
+      {/* Panel - fixed so it escapes any parent overflow */}
       {showPanel && (
-        <div className="absolute right-0 top-12 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+        <div
+          id="voice-input-panel"
+          className="fixed z-[200] w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
+          style={{ top: panelPos.top, right: panelPos.right }}
+        >
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 flex justify-between items-center">
             <div>

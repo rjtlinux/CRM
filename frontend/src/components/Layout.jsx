@@ -45,9 +45,8 @@ const Layout = () => {
               <p className="text-xs text-gray-600 font-medium">Business CRM</p>
             </div>
           </div>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3">
             <LanguageSwitch />
-            <VoiceInput />
           </div>
         </div>
 
