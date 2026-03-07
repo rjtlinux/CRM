@@ -66,7 +66,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Name of the customer or company' },
+          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script (e.g. Ramesh, not रमेश)' },
           amount: { type: 'number', description: 'Amount in Indian Rupees' },
           product: { type: 'string', description: 'What was given — product or service description' },
           quantity: { type: 'number', description: 'Quantity if applicable' },
@@ -83,7 +83,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer or company name' },
+          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script' },
           amount: { type: 'number', description: 'Sale amount in Indian Rupees' },
           product: { type: 'string', description: 'What was sold' },
         },
@@ -99,7 +99,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer name' },
+          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script' },
           amount: { type: 'number', description: 'Payment amount in Rupees' },
         },
         required: ['customer_name', 'amount'],
@@ -114,7 +114,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer name to check' },
+          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script' },
         },
         required: ['customer_name'],
       },
@@ -141,7 +141,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          name: { type: 'string', description: 'Customer or company name — this is the only thing needed' },
+          name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script (e.g. Ramesh, not रमेश)' },
         },
         required: ['name'],
       },
@@ -155,7 +155,9 @@ const VOICE_SYSTEM_PROMPT = `You are a CRM assistant for an Indian small busines
 
 You can: record udhar/credit, record cash sales, record payments received, check customer balances, show sales summaries, and add new customers (by name only — never ask for phone/email/other details, tell them to add those later from Customers page).
 
-If a customer isn't in the database, ask if you should add them. Keep responses short and natural.`;
+If a customer isn't in the database, ask if you should add them. Keep responses short and natural.
+
+IMPORTANT: Customer names in the database are stored in English/Roman script. When calling any tool, ALWAYS pass customer names in romanized English (e.g., "Ramesh" not "रमेश", "Suresh Kumar" not "सुरेश कुमार"). Convert Hindi/Devanagari names to their English spelling before passing to tools.`;
 
 // ─── Execute tool call ───────────────────────────────────────────────────────
 
