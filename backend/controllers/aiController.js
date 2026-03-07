@@ -38,6 +38,28 @@ const nextInvoiceNumber = async () => {
 
 // ─── 1. VOICE COMMAND — GPT-4o with Function Calling ────────────────────────
 
+// ─── WHISPER TRANSCRIPTION ───────────────────────────────────────────────────
+
+const transcribeAudio = async (fileBuffer, mimetype) => {
+  const { toFile } = require('openai');
+  const ext = mimetype.includes('webm') ? 'webm'
+    : mimetype.includes('ogg') ? 'ogg'
+    : mimetype.includes('mp4') ? 'mp4'
+    : mimetype.includes('wav') ? 'wav'
+    : 'webm';
+
+  const audioFile = await toFile(fileBuffer, `audio.${ext}`, { type: mimetype });
+  const result = await openai.audio.transcriptions.create({
+    file: audioFile,
+    model: 'whisper-1',
+    language: 'hi',            // hint: Hindi — Whisper auto-detects but this helps
+    response_format: 'text',
+  });
+  return result.trim();
+};
+
+// ─── AI TOOLS ────────────────────────────────────────────────────────────────
+
 const AI_TOOLS = [
   {
     type: 'function',
@@ -131,22 +153,33 @@ const AI_TOOLS = [
   },
 ];
 
-const VOICE_SYSTEM_PROMPT = `Tu ek samajhdar aur dosti bhara CRM assistant hai jo Indian chhote dukandaaron ki madad karta hai — kirana store, kapde ki dukaan, hardware, construction, koi bhi.
+const VOICE_SYSTEM_PROMPT = `Tum Buzeye AI ho — ek bahut hi samajhdar aur friendly business assistant jo Indian chhote dukandaaron aur business owners ke saath kaam karta hai. Tum unka kaam aasaan banate ho.
 
-Tu Hindi, English, aur Hinglish teeno samajhta hai. Jo bhaasha user bole, usi mein jawab de.
+Tumhari personality:
+- Bilkul ek trusted dost ki tarah baat karo — warm, helpful, casual
+- "Ho gaya!", "Perfect!", "Bilkul!", "Theek hai!" — yeh natural Hinglish use karo
+- Kabhi "I apologize" ya robotic English mat bolna
+- Chhota aur seedha jawab dena — max 2 sentences
 
-Tere paas ye tools hain: udhar darj karna, cash sale record karna, payment lena, balance check karna, naya customer banana.
+Tum yeh kaam kar sakte ho (tools hain tumhare paas):
+1. Udhar darj karna (Credit Book) — jab maal ya service di jaaye credit pe
+2. Cash sale record karna — jab turant payment ho
+3. Payment receive karna — jab customer ne udhar chukaya
+4. Balance check karna — customer ka kitna baaki hai
+5. Naya customer banana — sirf naam se, baaki details baad mein
 
-Bahut zaroori rules:
-• Responses CHHOTE rakho — 1-2 sentences maximum
-• Amounts mein ₹ sign use karo, Indian format mein (₹5,000 na ki 5000)
-• Jab koi kaam ho jaaye, clearly batao kya hua
-• Jab customer database mein nahi mile, toh seedha poochho — "Kya main [naam] ko naya customer ke roop mein add kar doon?"
-• Jab zaroori information missing ho, sirf woh ek cheez poochho
-• Bilkul formal mat bano — jaise dukaan ka koi dost baat kar raha ho
+Zaroori rules:
+• Jo bhaasha user bole (Hindi/English/Hinglish), usi mein jawab do
+• Amounts mein hamesha ₹ sign lagao, Indian format (₹5,000)
+• Agar customer nahi mila: "Kya [naam] ko naya customer add kar doon?" — bas itna poochho
+• Agar koi info missing hai: sirf ek specific sawaal poochho
+• Jab kaam ho jaaye: clearly confirm karo kya hua
 
-Hindi numbers ka gyaan:
-paanch sau = 500 | ek hazaar = 1000 | paanch hazaar = 5000 | das hazaar = 10,000 | paanch das hazaar = 50,000 | ek lakh = 1,00,000 | do lakh = 2,00,000`;
+Hindi numbers (correctly samjho):
+sau=100, do sau=200, paanch sau=500
+ek hazaar=1,000, paanch hazaar=5,000, das hazaar=10,000
+bees hazaar=20,000, pachchees hazaar=25,000, pachaas hazaar=50,000
+ek lakh=1,00,000, dedh lakh=1,50,000, do lakh=2,00,000, paanch lakh=5,00,000`;
 
 // Execute a tool call and return result string for GPT
 const executeTool = async (name, args, userId) => {
@@ -282,10 +315,33 @@ const executeTool = async (name, args, userId) => {
 
 const processVoiceCommand = async (req, res) => {
   try {
-    const { text, messages: clientMessages = [] } = req.body;
     const userId = req.user.id;
 
-    if (!text?.trim()) return res.status(400).json({ error: 'Text required' });
+    // Parse messages from either JSON body or FormData string
+    let clientMessages = [];
+    try {
+      const raw = req.body.messages;
+      clientMessages = raw ? JSON.parse(raw) : [];
+    } catch { clientMessages = []; }
+
+    // ── Transcribe audio if provided, else use text ──
+    let text = req.body.text || '';
+    let transcript = null;
+
+    if (req.file) {
+      try {
+        transcript = await transcribeAudio(req.file.buffer, req.file.mimetype || 'audio/webm');
+        text = transcript;
+        console.log(`[AI Whisper] Transcribed: "${text}"`);
+      } catch (whisperErr) {
+        console.error('[AI Whisper] Transcription error:', whisperErr.message);
+        return res.status(500).json({ response: 'Audio samajh nahi aaya. Dobara bolein ya type karein.', success: false });
+      }
+    }
+
+    if (!text?.trim()) {
+      return res.status(400).json({ response: 'Kuch suna nahi. Dobara bolein please.', success: false });
+    }
 
     // Build conversation: system + history (user/assistant only) + new user message
     const messages = [
@@ -318,7 +374,7 @@ const processVoiceCommand = async (req, res) => {
           .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
           .slice(-12);
 
-        return res.json({ response: responseText, messages: cleanHistory, success: true });
+        return res.json({ response: responseText, messages: cleanHistory, transcript, success: true });
       }
 
       // Execute each tool call and add results
@@ -329,7 +385,7 @@ const processVoiceCommand = async (req, res) => {
       }
     }
 
-    return res.json({ response: 'Maafi chahta hun, kuch samajh nahi aaya. Dobara bolein please.', success: false });
+    return res.json({ response: 'Thoda aur detail mein batayein please — kya karna hai?', transcript, success: false });
   } catch (error) {
     console.error('[AI] Voice command error:', error.message);
     res.status(500).json({ response: safeError(error), success: false });
