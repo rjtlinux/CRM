@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
 
-const VoiceInput = ({ onResult }) => {
+const VoiceInput = ({ onResult, fullWidth = false }) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [textInput, setTextInput] = useState('');
@@ -32,10 +32,21 @@ const VoiceInput = ({ onResult }) => {
       const rect = buttonRef.current.getBoundingClientRect();
       const panelWidth = 320;
       const viewportWidth = window.innerWidth;
-      // Position panel below button, right-aligned but never off-screen
-      let right = viewportWidth - rect.right;
-      if (right < 8) right = 8;
-      setPanelPos({ top: rect.bottom + 8, right });
+      const viewportHeight = window.innerHeight;
+      let top = rect.bottom + 8;
+      // If panel would overflow bottom, open upward
+      if (top + 520 > viewportHeight) top = Math.max(8, rect.top - 520);
+      // If button is on left half (e.g. sidebar), open panel to the right of button
+      // If button is on right half (e.g. mobile header), open panel to the left of button
+      let pos;
+      if (rect.left < viewportWidth / 2) {
+        const left = Math.min(rect.right + 8, viewportWidth - panelWidth - 8);
+        pos = { top, left };
+      } else {
+        const right = Math.max(viewportWidth - rect.right, 8);
+        pos = { top, right };
+      }
+      setPanelPos(pos);
     }
     setShowPanel(prev => !prev);
   };
@@ -134,6 +145,8 @@ const VoiceInput = ({ onResult }) => {
         ref={buttonRef}
         onClick={openPanel}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+          fullWidth ? 'w-full justify-center' : ''
+        } ${
           isListening
             ? 'bg-red-500 text-white animate-pulse'
             : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -141,7 +154,9 @@ const VoiceInput = ({ onResult }) => {
         title="AI Voice Assistant"
       >
         <span className="text-base">{isListening ? '⏹' : '🎤'}</span>
-        <span className="hidden sm:inline">{isListening ? 'Listening...' : 'AI Assistant'}</span>
+        <span className={fullWidth ? '' : 'hidden sm:inline'}>
+          {isListening ? 'Listening...' : 'AI Assistant'}
+        </span>
       </button>
 
       {/* Panel - fixed so it escapes any parent overflow */}
@@ -149,7 +164,7 @@ const VoiceInput = ({ onResult }) => {
         <div
           id="voice-input-panel"
           className="fixed z-[200] w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden"
-          style={{ top: panelPos.top, right: panelPos.right }}
+          style={panelPos}
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 flex justify-between items-center">

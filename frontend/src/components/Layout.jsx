@@ -90,6 +90,9 @@ const Layout = () => {
               </span>
             </div>
           </div>
+          <div className="mb-2">
+            <VoiceInput fullWidth />
+          </div>
           <button
             onClick={handleLogout}
             className="w-full btn-secondary text-sm"
