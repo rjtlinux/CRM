@@ -77,14 +77,45 @@ const transliterateHindi = (text) => {
 const findCustomer = async (name) => {
   const searchName = isDevanagari(name) ? transliterateHindi(name) : name;
 
-  const r = await pool.query(
+  // Exact / LIKE match first
+  const exact = await pool.query(
     `SELECT id, company_name, contact_person, phone FROM customers
      WHERE LOWER(company_name) LIKE LOWER($1) OR LOWER(contact_person) LIKE LOWER($1)
      ORDER BY CASE WHEN LOWER(company_name)=LOWER($2) OR LOWER(contact_person)=LOWER($2) THEN 0 ELSE 1 END
      LIMIT 3`,
     [`%${searchName}%`, searchName]
   );
-  return r.rows;
+  if (exact.rows.length) return { matches: exact.rows, type: 'exact' };
+
+  // Fuzzy fallback — try first 3+ chars prefix match
+  const prefix = searchName.length >= 3 ? searchName.slice(0, 3) : searchName;
+  const fuzzy = await pool.query(
+    `SELECT id, company_name, contact_person, phone FROM customers
+     WHERE LOWER(company_name) LIKE LOWER($1) OR LOWER(contact_person) LIKE LOWER($1)
+     ORDER BY company_name LIMIT 5`,
+    [`${prefix}%`]
+  );
+  if (fuzzy.rows.length) return { matches: fuzzy.rows, type: 'fuzzy' };
+
+  // Last resort — get all customers for suggestion (small business = few customers)
+  const all = await pool.query(
+    `SELECT id, company_name, contact_person, phone FROM customers
+     WHERE status = 'active' ORDER BY company_name LIMIT 20`
+  );
+  // Simple string distance: count matching characters
+  const scored = all.rows.map(c => {
+    const cn = c.company_name.toLowerCase();
+    const sn = searchName.toLowerCase();
+    let score = 0;
+    for (let i = 0; i < Math.min(cn.length, sn.length); i++) {
+      if (cn[i] === sn[i]) score += 2;
+      else if (cn.includes(sn[i])) score += 1;
+    }
+    return { ...c, score };
+  }).filter(c => c.score > 1).sort((a, b) => b.score - a.score).slice(0, 3);
+
+  if (scored.length) return { matches: scored, type: 'fuzzy' };
+  return { matches: [], type: 'none' };
 };
 
 const nextInvoiceNumber = async () => {
@@ -191,46 +222,55 @@ const AI_TOOLS = [
       },
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'create_customer',
-      description: 'Add a new customer to the database using ONLY their name. Do NOT ask for phone, email, or any other details — the user will fill those in later from the Customers page.',
-      parameters: {
-        type: 'object',
-        properties: {
-          name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
-        },
-        required: ['name'],
-      },
-    },
-  },
 ];
 
 // ─── SYSTEM PROMPT — in English, let GPT naturally handle Hindi ──────────────
 
 const VOICE_SYSTEM_PROMPT = `You are a CRM assistant for an Indian small business. Reply naturally in the user's language. Use ₹ for amounts. Keep responses short.
 
-RULE 1 — ALWAYS USE TOOLS: When the user mentions a customer name or asks about data, you MUST call the appropriate tool. NEVER reply about customer data, balances, or records without calling a tool first. Even if the name is in Hindi/Devanagari script, pass it directly to the tool — the system handles transliteration automatically.
+RULE 1 — ALWAYS USE TOOLS: When the user mentions a customer name or asks about data, you MUST call the appropriate tool. NEVER reply about customer data without calling a tool first. Pass names in any script — the system handles transliteration.
 
-RULE 2 — Follow-ups: When user says "haan/yes/kar do" after you asked a question, look at conversation history for context. Never re-ask for information already mentioned.
+RULE 2 — Follow-ups: When user says "haan/yes/kar do" etc., look at conversation history for context. Never re-ask for information already mentioned.
 
-RULE 3 — Customer not found: If a tool returns customer_not_found, ask if you should add them. When user confirms, create the customer AND complete the original request (e.g. record the udhar too).
+RULE 3 — Customer not found: You CANNOT add new customers. If a tool returns customer_not_found:
+  - If the tool returns "suggestions" (similar names), show them to the user and ask "Did you mean one of these?" Let the user pick.
+  - If no suggestions, tell the user immediately: "This customer is not in the system. Please add them from the Customers page first."
+  - NEVER offer to create customers yourself.
 
-RULE 4 — New customers: Only ask for name. Tell them to add phone/email later from Customers page.
+RULE 4 — Fuzzy names: If the user gives an unclear or partial name, STILL call the tool — the system does fuzzy matching and will return close matches if any.
 
-Available actions: record udhar, record cash sales, record payments, check balances, check sales, add customers.`;
+Available actions: record udhar, record cash sales, record payments, check balances, check sales.`;
 
 // ─── Execute tool call ───────────────────────────────────────────────────────
+
+const customerNotFound = (searchedName, result) => {
+  if (result.type === 'fuzzy' && result.matches.length) {
+    return JSON.stringify({
+      status: 'customer_not_found',
+      searched_name: searchedName,
+      suggestions: result.matches.map(c => c.company_name),
+      message: `"${searchedName}" not found. Similar customers: ${result.matches.map(c => c.company_name).join(', ')}. Ask user which one they meant.`,
+    });
+  }
+  return JSON.stringify({
+    status: 'customer_not_found',
+    searched_name: searchedName,
+    suggestions: [],
+    message: `"${searchedName}" is not in the system. User must add them from the Customers page first.`,
+  });
+};
+
+const resolveCustomer = async (name) => {
+  const result = await findCustomer(name);
+  if (result.type === 'exact' && result.matches.length) return { customer: result.matches[0], ok: true };
+  return { customer: null, ok: false, result };
+};
 
 const executeTool = async (name, args, userId) => {
   switch (name) {
     case 'record_udhar': {
-      const customers = await findCustomer(args.customer_name);
-      if (!customers.length) {
-        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
-      }
-      const c = customers[0];
+      const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
+      if (!ok) return customerNotFound(args.customer_name, result);
       const inv = await nextInvoiceNumber();
       const desc = [args.product, args.quantity ? `${args.quantity} units` : null, 'Voice entry']
         .filter(Boolean).join(' · ');
@@ -251,11 +291,8 @@ const executeTool = async (name, args, userId) => {
     }
 
     case 'create_sale': {
-      const customers = await findCustomer(args.customer_name);
-      if (!customers.length) {
-        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
-      }
-      const c = customers[0];
+      const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
+      if (!ok) return customerNotFound(args.customer_name, result);
       const inv = await nextInvoiceNumber();
       const desc = [args.product, 'Voice entry'].filter(Boolean).join(' · ');
       await pool.query(
@@ -267,11 +304,8 @@ const executeTool = async (name, args, userId) => {
     }
 
     case 'record_payment': {
-      const customers = await findCustomer(args.customer_name);
-      if (!customers.length) {
-        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
-      }
-      const c = customers[0];
+      const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
+      if (!ok) return customerNotFound(args.customer_name, result);
       const pending = await pool.query(
         `SELECT id, amount FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending' ORDER BY sale_date ASC LIMIT 1`,
         [c.id]
@@ -303,11 +337,8 @@ const executeTool = async (name, args, userId) => {
     }
 
     case 'check_balance': {
-      const customers = await findCustomer(args.customer_name);
-      if (!customers.length) {
-        return JSON.stringify({ status: 'customer_not_found', searched_name: args.customer_name });
-      }
-      const c = customers[0];
+      const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
+      if (!ok) return customerNotFound(args.customer_name, result);
       const r = await pool.query(
         `SELECT COALESCE(SUM(amount),0) as outstanding FROM sales WHERE customer_id=$1 AND payment_method='udhar' AND status='pending'`,
         [c.id]
@@ -329,29 +360,6 @@ const executeTool = async (name, args, userId) => {
       });
     }
 
-    case 'create_customer': {
-      try {
-        const storeName = isDevanagari(args.name)
-          ? args.name.split(/\s+/).map(w => {
-              const t = transliterateHindi(w);
-              return t.charAt(0).toUpperCase() + t.slice(1);
-            }).join(' ')
-          : args.name;
-
-        const existing = await findCustomer(storeName);
-        if (existing.length) {
-          return JSON.stringify({ status: 'already_exists', customer: existing[0].company_name, id: existing[0].id });
-        }
-        const r = await pool.query(
-          `INSERT INTO customers (company_name, status, created_by) VALUES ($1, 'active', $2) RETURNING id`,
-          [storeName, userId]
-        );
-        return JSON.stringify({ status: 'success', action: 'customer_created', customer: storeName, id: r.rows[0].id, note: 'Customer added with name only. User should add phone, email and other details from Customers page when they have time.' });
-      } catch (e) {
-        return JSON.stringify({ status: 'error', message: e.message });
-      }
-    }
-
     default:
       return JSON.stringify({ status: 'error', message: 'Unknown tool' });
   }
@@ -362,14 +370,15 @@ const executeTool = async (name, args, userId) => {
 const summarizeToolResult = (toolName, args, resultJson) => {
   try {
     const r = JSON.parse(resultJson);
-    if (r.status === 'customer_not_found') return `[Looked up "${args.customer_name || args.name}" → not found in database]`;
-    if (r.status === 'already_exists') return `[Customer "${r.customer}" already exists]`;
+    if (r.status === 'customer_not_found') {
+      const sugg = r.suggestions?.length ? ` Similar: ${r.suggestions.join(', ')}` : '';
+      return `[Looked up "${args.customer_name || args.name}" → not found.${sugg}]`;
+    }
     if (r.status === 'success') {
       switch (r.action) {
         case 'udhar_recorded': return `[Recorded ₹${r.amount} udhar for ${r.customer}, total outstanding: ₹${r.total_outstanding}]`;
         case 'sale_recorded': return `[Recorded ₹${r.amount} cash sale for ${r.customer}]`;
         case 'payment_recorded': return `[Recorded ₹${r.amount} payment from ${r.customer}, remaining: ₹${r.remaining_balance}]`;
-        case 'customer_created': return `[Created customer "${r.customer}" (ID: ${r.id})]`;
         default: break;
       }
       if (r.outstanding !== undefined) return `[${r.customer} outstanding: ₹${r.outstanding}]`;
