@@ -16,15 +16,73 @@ const safeError = (err) => {
   return 'AI feature temporarily unavailable. Please try again.';
 };
 
+// ─── DEVANAGARI → ROMAN TRANSLITERATION ─────────────────────────────────────
+
+const isDevanagari = (str) => /[\u0900-\u097F]/.test(str);
+
+const transliterateHindi = (text) => {
+  const vowels = {
+    'अ':'a','आ':'aa','इ':'i','ई':'ee','उ':'u','ऊ':'oo','ऋ':'ri',
+    'ए':'e','ऐ':'ai','ओ':'o','औ':'au',
+  };
+  const consonants = {
+    'क':'k','ख':'kh','ग':'g','घ':'gh','ङ':'ng',
+    'च':'ch','छ':'chh','ज':'j','झ':'jh','ञ':'ny',
+    'ट':'t','ठ':'th','ड':'d','ढ':'dh','ण':'n',
+    'त':'t','थ':'th','द':'d','ध':'dh','न':'n',
+    'प':'p','फ':'f','ब':'b','भ':'bh','म':'m',
+    'य':'y','र':'r','ल':'l','व':'v',
+    'श':'sh','ष':'sh','स':'s','ह':'h',
+  };
+  const matras = {
+    'ा':'a','ि':'i','ी':'ee','ु':'u','ू':'oo',
+    'े':'e','ै':'ai','ो':'o','ौ':'au',
+  };
+
+  const chars = [...text];
+  let result = '';
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const next = chars[i + 1];
+
+    if (vowels[ch]) {
+      result += vowels[ch];
+    } else if (consonants[ch]) {
+      result += consonants[ch];
+      if (next === '\u094D') {        // halant — no implicit vowel
+        i++;
+      } else if (next && matras[next]) {
+        result += matras[next];
+        i++;
+      } else {
+        result += 'a';               // implicit schwa
+      }
+    } else if (ch === '\u0902') {     // anusvara ं
+      result += 'n';
+    } else if (ch === '\u0903') {     // visarga ः
+      result += 'h';
+    } else if (ch === '\u094D' || ch === '\u093C' || ch === '\u0901') {
+      // halant, nukta, chandrabindu — skip
+    } else {
+      result += ch;
+    }
+  }
+
+  return result.replace(/a$/, '');    // drop trailing schwa
+};
+
 // ─── DB HELPERS ──────────────────────────────────────────────────────────────
 
 const findCustomer = async (name) => {
+  const searchName = isDevanagari(name) ? transliterateHindi(name) : name;
+
   const r = await pool.query(
     `SELECT id, company_name, contact_person, phone FROM customers
      WHERE LOWER(company_name) LIKE LOWER($1) OR LOWER(contact_person) LIKE LOWER($1)
      ORDER BY CASE WHEN LOWER(company_name)=LOWER($2) OR LOWER(contact_person)=LOWER($2) THEN 0 ELSE 1 END
      LIMIT 3`,
-    [`%${name}%`, name]
+    [`%${searchName}%`, searchName]
   );
   return r.rows;
 };
@@ -273,15 +331,22 @@ const executeTool = async (name, args, userId) => {
 
     case 'create_customer': {
       try {
-        const existing = await findCustomer(args.name);
+        const storeName = isDevanagari(args.name)
+          ? args.name.split(/\s+/).map(w => {
+              const t = transliterateHindi(w);
+              return t.charAt(0).toUpperCase() + t.slice(1);
+            }).join(' ')
+          : args.name;
+
+        const existing = await findCustomer(storeName);
         if (existing.length) {
           return JSON.stringify({ status: 'already_exists', customer: existing[0].company_name, id: existing[0].id });
         }
         const r = await pool.query(
           `INSERT INTO customers (company_name, status, created_by) VALUES ($1, 'active', $2) RETURNING id`,
-          [args.name, userId]
+          [storeName, userId]
         );
-        return JSON.stringify({ status: 'success', action: 'customer_created', customer: args.name, id: r.rows[0].id, note: 'Customer added with name only. User should add phone, email and other details from Customers page when they have time.' });
+        return JSON.stringify({ status: 'success', action: 'customer_created', customer: storeName, id: r.rows[0].id, note: 'Customer added with name only. User should add phone, email and other details from Customers page when they have time.' });
       } catch (e) {
         return JSON.stringify({ status: 'error', message: e.message });
       }
