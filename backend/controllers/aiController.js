@@ -157,7 +157,11 @@ You can: record udhar/credit, record cash sales, record payments received, check
 
 If a customer isn't in the database, ask if you should add them. Keep responses short and natural.
 
-IMPORTANT: Customer names in the database are stored in English/Roman script. When calling any tool, ALWAYS pass customer names in romanized English (e.g., "Ramesh" not "रमेश", "Suresh Kumar" not "सुरेश कुमार"). Convert Hindi/Devanagari names to their English spelling before passing to tools.`;
+CRITICAL — Follow-up handling: When the user says "haan", "yes", "kar do", "add kar do" etc. after you asked a question, ALWAYS look at the previous messages to understand WHO or WHAT they are referring to. Never ask again for information already mentioned in the conversation. For example, if you asked "Should I add Mohan?" and user says "haan", you already know the name is Mohan — just do it.
+
+If a customer was not found and you create them, also complete the ORIGINAL request (e.g. if user wanted to record udhar, create the customer first, then record the udhar).
+
+Customer names in the database are in English/Roman script. Always pass customer names in romanized English to tools (e.g., "Ramesh" not "रमेश").`;
 
 // ─── Execute tool call ───────────────────────────────────────────────────────
 
@@ -288,6 +292,55 @@ const executeTool = async (name, args, userId) => {
   }
 };
 
+// ─── Build clean history with tool action summaries ─────────────────────────
+
+const summarizeToolResult = (toolName, args, resultJson) => {
+  try {
+    const r = JSON.parse(resultJson);
+    if (r.status === 'customer_not_found') return `[Looked up "${args.customer_name || args.name}" → not found in database]`;
+    if (r.status === 'already_exists') return `[Customer "${r.customer}" already exists]`;
+    if (r.status === 'success') {
+      switch (r.action) {
+        case 'udhar_recorded': return `[Recorded ₹${r.amount} udhar for ${r.customer}, total outstanding: ₹${r.total_outstanding}]`;
+        case 'sale_recorded': return `[Recorded ₹${r.amount} cash sale for ${r.customer}]`;
+        case 'payment_recorded': return `[Recorded ₹${r.amount} payment from ${r.customer}, remaining: ₹${r.remaining_balance}]`;
+        case 'customer_created': return `[Created customer "${r.customer}" (ID: ${r.id})]`;
+        default: break;
+      }
+      if (r.outstanding !== undefined) return `[${r.customer} outstanding: ₹${r.outstanding}]`;
+      if (r.today) return `[Today: ${r.today.count} sales, ₹${r.today.total} | Month: ${r.month.count} sales, ₹${r.month.total}]`;
+    }
+    return `[${toolName}: ${r.status}]`;
+  } catch { return `[${toolName} completed]`; }
+};
+
+const buildCleanHistory = (messages) => {
+  const clean = [];
+  const raw = messages.slice(1); // skip system
+
+  for (let i = 0; i < raw.length; i++) {
+    const m = raw[i];
+    if (m.role === 'user') {
+      clean.push({ role: 'user', content: m.content });
+    } else if (m.role === 'assistant') {
+      if (m.tool_calls?.length) {
+        const summaries = [];
+        for (const tc of m.tool_calls) {
+          const args = JSON.parse(tc.function.arguments || '{}');
+          const toolResult = raw.find(tm => tm.role === 'tool' && tm.tool_call_id === tc.id);
+          summaries.push(summarizeToolResult(tc.function.name, args, toolResult?.content || '{}'));
+        }
+        clean.push({ role: 'assistant', content: summaries.join('\n') });
+      } else if (typeof m.content === 'string') {
+        clean.push({ role: 'assistant', content: m.content });
+      }
+    }
+    // tool messages are already covered by summaries above
+  }
+
+  return clean.slice(-14);
+};
+
 // ─── VOICE COMMAND HANDLER ───────────────────────────────────────────────────
 
 const processVoiceCommand = async (req, res) => {
@@ -330,7 +383,7 @@ const processVoiceCommand = async (req, res) => {
         messages,
         tools: AI_TOOLS,
         tool_choice: 'auto',
-        temperature: 0.85,
+        temperature: 0.7,
         max_tokens: 400,
       });
 
@@ -339,18 +392,7 @@ const processVoiceCommand = async (req, res) => {
 
       if (!choice.message.tool_calls?.length) {
         const responseText = choice.message.content;
-        // Only keep user and assistant TEXT messages (no tool_calls, no tool responses)
-        // Strip tool_calls from assistant messages so they don't break the next API call
-        const cleanHistory = messages
-          .slice(1)
-          .filter(m => {
-            if (m.role === 'user') return true;
-            if (m.role === 'assistant' && typeof m.content === 'string' && !m.tool_calls?.length) return true;
-            return false;
-          })
-          .map(m => ({ role: m.role, content: m.content }))
-          .slice(-14);
-
+        const cleanHistory = buildCleanHistory(messages);
         return res.json({ response: responseText, messages: cleanHistory, transcript, success: true });
       }
 
