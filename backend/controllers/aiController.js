@@ -124,7 +124,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script (e.g. Ramesh, not रमेश)' },
+          customer_name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
           amount: { type: 'number', description: 'Amount in Indian Rupees' },
           product: { type: 'string', description: 'What was given — product or service description' },
           quantity: { type: 'number', description: 'Quantity if applicable' },
@@ -141,7 +141,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script' },
+          customer_name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
           amount: { type: 'number', description: 'Sale amount in Indian Rupees' },
           product: { type: 'string', description: 'What was sold' },
         },
@@ -157,7 +157,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script' },
+          customer_name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
           amount: { type: 'number', description: 'Payment amount in Rupees' },
         },
         required: ['customer_name', 'amount'],
@@ -172,7 +172,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script' },
+          customer_name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
         },
         required: ['customer_name'],
       },
@@ -199,7 +199,7 @@ const AI_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          name: { type: 'string', description: 'Customer name in ENGLISH/ROMAN script (e.g. Ramesh, not रमेश)' },
+          name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
         },
         required: ['name'],
       },
@@ -219,7 +219,7 @@ CRITICAL — Follow-up handling: When the user says "haan", "yes", "kar do", "ad
 
 If a customer was not found and you create them, also complete the ORIGINAL request (e.g. if user wanted to record udhar, create the customer first, then record the udhar).
 
-Customer names in the database are in English/Roman script. Always pass customer names in romanized English to tools (e.g., "Ramesh" not "रमेश").`;
+ALWAYS call the appropriate tool to check — never assume a customer exists or doesn't exist without looking up.`;
 
 // ─── Execute tool call ───────────────────────────────────────────────────────
 
