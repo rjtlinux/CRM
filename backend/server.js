@@ -37,6 +37,7 @@ const udharKhataRoutes = require('./routes/udharKhataRoutes');
 const gstRoutes = require('./routes/gstRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const whatsappRoutes = require('./routes/whatsappRoutes');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -54,6 +55,7 @@ app.use('/api/udhar-khata', udharKhataRoutes);
 app.use('/api/gst', gstRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

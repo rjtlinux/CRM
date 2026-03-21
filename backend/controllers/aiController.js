@@ -415,6 +415,45 @@ const buildCleanHistory = (messages) => {
   return clean.slice(-14);
 };
 
+// ─── SHARED AGENTIC LOOP (reused by portal + WhatsApp) ──────────────────────
+
+const runAgenticLoop = async (systemPrompt, historyMessages, userText, userId) => {
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...historyMessages.slice(-12),
+    { role: 'user', content: userText },
+  ];
+
+  for (let i = 0; i < 8; i++) {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages,
+      tools: AI_TOOLS,
+      tool_choice: 'auto',
+      temperature: 0.7,
+      max_tokens: 400,
+    });
+
+    const choice = completion.choices[0];
+    messages.push(choice.message);
+
+    if (!choice.message.tool_calls?.length) {
+      return {
+        response: choice.message.content,
+        cleanHistory: buildCleanHistory(messages),
+      };
+    }
+
+    for (const toolCall of choice.message.tool_calls) {
+      const args = JSON.parse(toolCall.function.arguments);
+      const result = await executeTool(toolCall.function.name, args, userId);
+      messages.push({ role: 'tool', tool_call_id: toolCall.id, content: result });
+    }
+  }
+
+  return { response: 'Thoda aur detail mein batao — kya karna hai?', cleanHistory: [] };
+};
+
 // ─── VOICE COMMAND HANDLER ───────────────────────────────────────────────────
 
 const processVoiceCommand = async (req, res) => {
@@ -444,38 +483,8 @@ const processVoiceCommand = async (req, res) => {
       return res.status(400).json({ response: 'Kuch suna nahi, dobara bolo.', success: false });
     }
 
-    const messages = [
-      { role: 'system', content: VOICE_SYSTEM_PROMPT },
-      ...clientMessages.slice(-12),
-      { role: 'user', content: text },
-    ];
-
-    // Agentic loop: GPT calls tools, gets results, eventually writes a response
-    for (let i = 0; i < 8; i++) {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages,
-        tools: AI_TOOLS,
-        tool_choice: 'auto',
-        temperature: 0.7,
-        max_tokens: 400,
-      });
-
-      const choice = completion.choices[0];
-      messages.push(choice.message);
-
-      if (!choice.message.tool_calls?.length) {
-        const responseText = choice.message.content;
-        const cleanHistory = buildCleanHistory(messages);
-        return res.json({ response: responseText, messages: cleanHistory, transcript, success: true });
-      }
-
-      for (const toolCall of choice.message.tool_calls) {
-        const args = JSON.parse(toolCall.function.arguments);
-        const result = await executeTool(toolCall.function.name, args, userId);
-        messages.push({ role: 'tool', tool_call_id: toolCall.id, content: result });
-      }
-    }
+    const { response, cleanHistory } = await runAgenticLoop(VOICE_SYSTEM_PROMPT, clientMessages, text, userId);
+    return res.json({ response, messages: cleanHistory, transcript, success: true });
 
     return res.json({ response: 'Thoda aur detail mein batao — kya karna hai?', transcript, success: false });
   } catch (error) {
@@ -706,4 +715,8 @@ module.exports = {
   generateSmartReminder,
   suggestDataEntry,
   conversationalAnalytics,
+  runAgenticLoop,
+  VOICE_SYSTEM_PROMPT,
+  AI_TOOLS,
+  buildCleanHistory,
 };
