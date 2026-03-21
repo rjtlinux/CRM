@@ -222,6 +222,27 @@ const AI_TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'check_customers',
+      description: 'Get total number of customers, list of customer names, or customers with outstanding udhar balance.',
+      parameters: {
+        type: 'object',
+        properties: {
+          filter: { type: 'string', enum: ['all', 'with_udhar', 'top_outstanding'], description: 'all = total count and list, with_udhar = only customers who owe money, top_outstanding = top 5 by balance' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'business_summary',
+      description: 'Get a full business overview — total revenue, costs, profit, outstanding udhar, customer count, and recent activity.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
 ];
 
 // ─── SYSTEM PROMPT — in English, let GPT naturally handle Hindi ──────────────
@@ -239,7 +260,7 @@ RULE 3 — Customer not found: You CANNOT add new customers. If a tool returns c
 
 RULE 4 — Fuzzy names: If the user gives an unclear or partial name, STILL call the tool — the system does fuzzy matching and will return close matches if any.
 
-Available actions: record udhar, record cash sales, record payments, check balances, check sales.`;
+Available actions: record udhar, record cash sales, record payments, check balances, check sales, check customers (count/list/who owes), business summary (revenue/profit/outstanding this month).`;
 
 // ─── Execute tool call ───────────────────────────────────────────────────────
 
@@ -360,6 +381,73 @@ const executeTool = async (name, args, userId) => {
       });
     }
 
+    case 'check_customers': {
+      const filter = args.filter || 'all';
+      if (filter === 'all') {
+        const r = await pool.query(
+          `SELECT id, company_name, contact_person, phone FROM customers WHERE status='active' ORDER BY company_name`
+        );
+        return JSON.stringify({
+          status: 'success',
+          total: r.rows.length,
+          customers: r.rows.map(c => c.company_name),
+        });
+      }
+      if (filter === 'with_udhar') {
+        const r = await pool.query(
+          `SELECT c.company_name, COALESCE(SUM(s.amount),0) as outstanding
+           FROM customers c
+           JOIN sales s ON s.customer_id=c.id
+           WHERE s.payment_method='udhar' AND s.status='pending'
+           GROUP BY c.company_name
+           ORDER BY outstanding DESC`
+        );
+        return JSON.stringify({
+          status: 'success',
+          total: r.rows.length,
+          customers: r.rows.map(c => ({ name: c.company_name, outstanding: parseFloat(c.outstanding) })),
+        });
+      }
+      if (filter === 'top_outstanding') {
+        const r = await pool.query(
+          `SELECT c.company_name, COALESCE(SUM(s.amount),0) as outstanding
+           FROM customers c
+           JOIN sales s ON s.customer_id=c.id
+           WHERE s.payment_method='udhar' AND s.status='pending'
+           GROUP BY c.company_name
+           ORDER BY outstanding DESC
+           LIMIT 5`
+        );
+        return JSON.stringify({
+          status: 'success',
+          customers: r.rows.map(c => ({ name: c.company_name, outstanding: parseFloat(c.outstanding) })),
+        });
+      }
+      break;
+    }
+
+    case 'business_summary': {
+      const [rev, costs, customers, udhar, todaySales] = await Promise.all([
+        pool.query(`SELECT COALESCE(SUM(amount),0) as total FROM sales WHERE status='completed' AND DATE_TRUNC('month',sale_date)=DATE_TRUNC('month',CURRENT_DATE)`),
+        pool.query(`SELECT COALESCE(SUM(amount),0) as total FROM costs WHERE payment_status='paid' AND DATE_TRUNC('month',cost_date)=DATE_TRUNC('month',CURRENT_DATE)`),
+        pool.query(`SELECT COUNT(*) as total FROM customers WHERE status='active'`),
+        pool.query(`SELECT COALESCE(SUM(amount),0) as total, COUNT(DISTINCT customer_id) as count FROM sales WHERE payment_method='udhar' AND status='pending'`),
+        pool.query(`SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as total FROM sales WHERE sale_date=CURRENT_DATE AND status='completed'`),
+      ]);
+      return JSON.stringify({
+        status: 'success',
+        this_month: {
+          revenue: parseFloat(rev.rows[0].total),
+          costs: parseFloat(costs.rows[0].total),
+          profit: parseFloat(rev.rows[0].total) - parseFloat(costs.rows[0].total),
+        },
+        today_sales: { count: parseInt(todaySales.rows[0].count), total: parseFloat(todaySales.rows[0].total) },
+        total_customers: parseInt(customers.rows[0].total),
+        total_outstanding: parseFloat(udhar.rows[0].total),
+        customers_with_udhar: parseInt(udhar.rows[0].count),
+      });
+    }
+
     default:
       return JSON.stringify({ status: 'error', message: 'Unknown tool' });
   }
@@ -383,6 +471,8 @@ const summarizeToolResult = (toolName, args, resultJson) => {
       }
       if (r.outstanding !== undefined) return `[${r.customer} outstanding: ₹${r.outstanding}]`;
       if (r.today) return `[Today: ${r.today.count} sales, ₹${r.today.total} | Month: ${r.month.count} sales, ₹${r.month.total}]`;
+      if (r.total_customers !== undefined) return `[Business: ${r.total_customers} customers, ₹${r.this_month?.revenue} revenue this month, ₹${r.total_outstanding} total udhar]`;
+      if (r.total !== undefined && r.customers) return `[${r.total} customers: ${r.customers?.slice(0,5).join(', ')}]`;
     }
     return `[${toolName}: ${r.status}]`;
   } catch { return `[${toolName} completed]`; }
