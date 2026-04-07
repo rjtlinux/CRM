@@ -1,10 +1,22 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const { validateEmail, validatePassword } = require('../middleware/validators');
 
 const register = async (req, res) => {
   try {
     const { email, password, full_name, role } = req.body;
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Validate password strength
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
 
     // Check if user exists
     const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);

@@ -147,6 +147,25 @@ After running the database schema, you can login with:
 
 ⚠️ **Important:** Change these credentials immediately in production!
 
+## Documentation
+
+### Development & Architecture
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and design patterns
+- [DOCKER_GUIDE.md](DOCKER_GUIDE.md) - Docker setup and usage
+- [AI_IMPLEMENTATION_GUIDE.md](AI_IMPLEMENTATION_GUIDE.md) - AI assistant features
+- [GST_COMPLIANCE_COMPLETE.md](GST_COMPLIANCE_COMPLETE.md) - GST implementation
+
+### Production & Deployment
+- [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md) - Production server setup
+- [PRODUCTION_ACCESS.md](PRODUCTION_ACCESS.md) - **SSH access, credentials, common commands**
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - **Common issues and fixes**
+- [DEPLOYMENT_ROUTING.md](DEPLOYMENT_ROUTING.md) - Multi-tenant routing
+
+### Market & Product
+- [INDIAN_MARKET_RESEARCH.md](INDIAN_MARKET_RESEARCH.md) - Market research
+- [INDIAN_MARKET_ROADMAP.md](INDIAN_MARKET_ROADMAP.md) - Product roadmap
+- [SUBSCRIPTION_SECURITY_GUIDE.md](SUBSCRIPTION_SECURITY_GUIDE.md) - Security guidelines
+
 ## API Endpoints
 
 ### Authentication

@@ -1,19 +1,80 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware - CORS configuration for all origins
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// CORS configuration - Whitelist specific origins only
+const allowedOrigins = [
+  'https://acme.buzeye.com',
+  'https://admin.buzeye.com',
+  'https://buzeye.com',
+  'http://localhost:5173', // Local development
+  'http://localhost:3000', // Local development
+  process.env.NODE_ENV === 'development' ? 'http://localhost:5180' : null,
+].filter(Boolean);
+
 app.use(cors({
-  origin: '*', // Allow all origins (for development and IP access)
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Body parser with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 login attempts per 15 minutes
+  skipSuccessfulRequests: true,
+  message: 'Too many login attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general rate limit to all API routes
+app.use('/api/', generalLimiter);
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -40,7 +101,7 @@ const aiRoutes = require('./routes/aiRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 
 // API Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes); // Rate limit auth endpoints
 app.use('/api/customers', customerRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/costs', costRoutes);

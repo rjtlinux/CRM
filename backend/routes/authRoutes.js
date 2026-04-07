@@ -11,12 +11,20 @@ const {
   updateUserRole
 } = require('../controllers/authController');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const { 
+  sanitize, 
+  validate, 
+  loginValidationRules, 
+  registerValidationRules 
+} = require('../middleware/validators');
 
 // Public routes (registration disabled - admin-only onboarding)
 router.post('/register', (req, res) => {
   res.status(403).json({ error: 'Registration disabled. Contact admin for access.' });
 });
-router.post('/login', login);
+
+// Login with validation and sanitization
+router.post('/login', sanitize, loginValidationRules(), validate, login);
 
 // Protected routes
 router.get('/profile', authenticateToken, getProfile);
