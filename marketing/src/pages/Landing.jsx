@@ -162,7 +162,7 @@ const Landing = () => {
     },
     {
       q: 'How secure is my data?',
-      a: 'We take security seriously. Your data is isolated in dedicated databases, encrypted in transit and at rest, and backed up daily. We are ISO 27001 certified and GDPR compliant.'
+      a: 'We take security seriously. Your data is isolated in dedicated databases, encrypted in transit and at rest, and backed up daily. We follow industry best practices for security and data protection.'
     },
     {
       q: 'Can I integrate with my existing tools?',
@@ -279,33 +279,7 @@ const Landing = () => {
               </a>
             </div>
 
-            {/* Trust Signals */}
-            <div className="flex flex-wrap justify-center items-center gap-8 text-sm text-slate-600 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-success-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>ISO 27001 Certified</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-success-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>GDPR Compliant</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-success-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>SOC 2 Type II</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-success-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>99.9% Uptime SLA</span>
-              </div>
-            </div>
+
           </div>
         </div>
       </section>
@@ -565,26 +539,6 @@ const Landing = () => {
               <p className="text-slate-400 mb-6 max-w-md">
                 Enterprise CRM built for Indian businesses. Manage customers, sales, GST, and credit book with AI-powered insights.
               </p>
-              <div className="flex gap-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <svg className="w-4 h-4 text-success-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>ISO 27001</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <svg className="w-4 h-4 text-success-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>GDPR</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <svg className="w-4 h-4 text-success-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>SOC 2</span>
-                </div>
-              </div>
             </div>
 
             {/* Products */}
