@@ -174,7 +174,7 @@ const Landing = () => {
     },
     {
       q: 'Is there a free trial?',
-      a: 'Yes! We offer a 14-day free trial with full access to all features. No credit card required. Contact us at hello@buzeye.com to get started.'
+      a: 'Yes! We offer a 14-day free trial with full access to all features. No credit card required. Contact us at contact@buzeye.com to get started.'
     }
   ];
 
@@ -196,13 +196,8 @@ const Landing = () => {
               <a href="#pricing" className="text-slate-600 hover:text-primary-600 transition font-medium">Pricing</a>
               <a href="#testimonials" className="text-slate-600 hover:text-primary-600 transition font-medium">Testimonials</a>
               <a href="#faq" className="text-slate-600 hover:text-primary-600 transition font-medium">FAQ</a>
-              <a
-                href="https://admin.buzeye.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold hover:shadow-lg hover:shadow-primary-500/30 transition"
-              >
-                Admin Login
+              <a href="#contact" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold hover:shadow-lg hover:shadow-primary-500/30 transition">
+                Contact Us
               </a>
             </nav>
 
@@ -229,17 +224,12 @@ const Landing = () => {
                 <a href="#pricing" className="text-slate-600 hover:text-primary-600 transition font-medium" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
                 <a href="#testimonials" className="text-slate-600 hover:text-primary-600 transition font-medium" onClick={() => setMobileMenuOpen(false)}>Testimonials</a>
                 <a href="#faq" className="text-slate-600 hover:text-primary-600 transition font-medium" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
-                <a
-                  href="https://admin.buzeye.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold text-center"
-                >
-                  Admin Login
+                <a href="#contact" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold text-center" onClick={() => setMobileMenuOpen(false)}>
+                  Contact Us
                 </a>
               </nav>
             </div>
-          )}
+          )}  
         </div>
       </header>
 
@@ -537,22 +527,14 @@ const Landing = () => {
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
             <a
-              href="mailto:hello@buzeye.com"
+              href="mailto:contact@buzeye.com"
               className="px-8 py-4 rounded-xl bg-accent-500 text-slate-900 font-semibold text-lg hover:bg-accent-400 transition shadow-lg hover:shadow-accent-500/50"
             >
               Contact Sales
             </a>
-            <a
-              href="https://admin.buzeye.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-4 rounded-xl border-2 border-white text-white font-semibold text-lg hover:bg-white/10 transition"
-            >
-              Admin Login
-            </a>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="flex justify-center max-w-2xl mx-auto">
             <div className="flex items-center gap-4 p-6 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
               <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -561,22 +543,8 @@ const Landing = () => {
               </div>
               <div className="text-left">
                 <div className="text-sm text-primary-200">Email Us</div>
-                <a href="mailto:hello@buzeye.com" className="font-semibold hover:text-accent-300 transition">
-                  hello@buzeye.com
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-6 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-primary-200">Website</div>
-                <a href="https://admin.buzeye.com" target="_blank" rel="noopener noreferrer" className="font-semibold hover:text-accent-300 transition">
-                  admin.buzeye.com
+                <a href="mailto:contact@buzeye.com" className="font-semibold hover:text-accent-300 transition">
+                  contact@buzeye.com
                 </a>
               </div>
             </div>
@@ -625,7 +593,6 @@ const Landing = () => {
               <ul className="space-y-3 text-sm">
                 <li><a href="#features" className="hover:text-white transition">CRM Features</a></li>
                 <li><a href="#pricing" className="hover:text-white transition">Pricing</a></li>
-                <li><a href="https://admin.buzeye.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Admin Portal</a></li>
                 <li><a href="#testimonials" className="hover:text-white transition">Customer Stories</a></li>
               </ul>
             </div>
@@ -636,7 +603,7 @@ const Landing = () => {
               <ul className="space-y-3 text-sm">
                 <li><a href="#contact" className="hover:text-white transition">Contact Us</a></li>
                 <li><a href="#faq" className="hover:text-white transition">FAQ</a></li>
-                <li><a href="mailto:hello@buzeye.com" className="hover:text-white transition">Support</a></li>
+                <li><a href="mailto:contact@buzeye.com" className="hover:text-white transition">Support</a></li>
                 <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
               </ul>
             </div>
