@@ -126,7 +126,7 @@ services:
       MASTER_DB_PASSWORD: ${MASTER_DB_PASSWORD:-CRMSecure2026}
     volumes:
       - ${TENANTS_DIR}/registry.json:/app/tenants-registry/registry.json:ro
-7    ports:
+    ports:
       - "${NEXT_BACKEND}:5000"
     depends_on:
       database:
