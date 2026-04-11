@@ -3,10 +3,12 @@
 # Provision a new Buzeye CRM tenant (Separate Deployment Per Tenant - Option D)
 # Each client gets: own subdomain, own database, own containers
 #
-# Usage: ./provision-tenant.sh <slug> "Company Name" admin@company.com "Admin Name"
+# Usage: ./provision-tenant.sh <slug> "Company Name" admin@company.com "Admin Name" [plan]
 #
-# Example: ./provision-tenant.sh acme "Acme Corp" admin@acme.com "John Doe"
+# Example: ./provision-tenant.sh acme "Acme Corp" admin@acme.com "John Doe" starter
 #          Creates: https://acme.buzeye.com with isolated DB and containers
+#
+# Plans: starter, professional, enterprise (default: professional)
 #
 
 set -e
@@ -15,14 +17,16 @@ SLUG=$1
 COMPANY_NAME=$2
 ADMIN_EMAIL=$3
 ADMIN_NAME=${4:-"Admin"}
-ADMIN_PASSWORD=${5:-"Buzeye@2026"}
+PLAN=${5:-"professional"}
+ADMIN_PASSWORD=${6:-"Buzeye@2026"}
 
 if [ -z "$SLUG" ] || [ -z "$COMPANY_NAME" ] || [ -z "$ADMIN_EMAIL" ]; then
-    echo "Usage: $0 <slug> \"Company Name\" admin@company.com [Admin Name] [Admin Password]"
+    echo "Usage: $0 <slug> \"Company Name\" admin@company.com [Admin Name] [plan] [Admin Password]"
     echo ""
-    echo "Example: $0 acme \"Acme Corp\" admin@acme.com \"John Doe\""
+    echo "Example: $0 acme \"Acme Corp\" admin@acme.com \"John Doe\" starter"
     echo ""
     echo "Slug becomes subdomain: acme.buzeye.com"
+    echo "Plans: starter, professional (default), enterprise"
     exit 1
 fi
 
@@ -30,6 +34,13 @@ fi
 SLUG=$(echo "$SLUG" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]//g')
 if [ -z "$SLUG" ]; then
     echo "Error: Invalid slug. Use only letters and numbers."
+    exit 1
+fi
+
+# Validate plan
+PLAN=$(echo "$PLAN" | tr '[:upper:]' '[:lower:]')
+if [[ ! "$PLAN" =~ ^(starter|professional|enterprise)$ ]]; then
+    echo "Error: Invalid plan '$PLAN'. Use: starter, professional, or enterprise"
     exit 1
 fi
 
@@ -53,6 +64,7 @@ echo "=========================================="
 echo "Provisioning tenant: $SLUG"
 echo "Subdomain: $SLUG.buzeye.com"
 echo "Company: $COMPANY_NAME"
+echo "Plan: $PLAN"
 echo "=========================================="
 
 mkdir -p "$TENANT_DIR"
@@ -107,6 +119,11 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       TENANTS_REGISTRY_PATH: /app/tenants-registry/registry.json
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      MASTER_DB_HOST: crm_database
+      MASTER_DB_PORT: 5432
+      MASTER_DB_NAME: crm_master
+      MASTER_DB_USER: crm_user
+      MASTER_DB_PASSWORD: ${MASTER_DB_PASSWORD:-CRMSecure2026}
     volumes:
       - ${TENANTS_DIR}/registry.json:/app/tenants-registry/registry.json:ro
 7    ports:
@@ -225,6 +242,34 @@ EOF
 docker exec -i crm_${SLUG}_database psql -U $DB_USER -d $DB_NAME < "$TMP_SQL" 2>/dev/null && echo "Admin user created" || echo "Run migrations manually if needed"
 rm -f "$TMP_SQL"
 
+# Register tenant in master database
+echo "Registering tenant in master database..."
+TMP_MASTER_SQL=$(mktemp)
+cat > "$TMP_MASTER_SQL" << EOF
+INSERT INTO tenants (
+  slug, name, subdomain,
+  db_name, db_user, db_password,
+  frontend_port, backend_port, db_port,
+  plan, status, admin_email, admin_name
+) VALUES (
+  '$SLUG',
+  '$COMPANY_NAME',
+  '${SLUG}.buzeye.com',
+  '$DB_NAME',
+  '$DB_USER',
+  '$DB_PASSWORD',
+  $NEXT_FRONTEND, $NEXT_BACKEND, $NEXT_DB,
+  '$PLAN',
+  'active',
+  '$ADMIN_EMAIL',
+  '$ADMIN_NAME'
+) ON CONFLICT (slug) DO UPDATE
+SET plan = '$PLAN',
+    updated_at = CURRENT_TIMESTAMP;
+EOF
+docker exec -i crm_database psql -U crm_user -d crm_master < "$TMP_MASTER_SQL" 2>/dev/null && echo "Tenant registered in master DB with $PLAN plan" || echo "Warning: Could not register in master DB"
+rm -f "$TMP_MASTER_SQL"
+
 echo ""
 echo "=========================================="
 echo "Tenant provisioned: $SLUG"
@@ -233,6 +278,7 @@ echo ""
 echo "URL: http://${SLUG}.buzeye.com (add DNS + Nginx)"
 echo "Direct: http://$(hostname -I | awk '{print $1}'):${NEXT_FRONTEND}"
 echo ""
+echo "Plan: $PLAN"
 echo "Admin: $ADMIN_EMAIL"
 echo "Password: $ADMIN_PASSWORD"
 echo ""
