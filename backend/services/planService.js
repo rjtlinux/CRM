@@ -186,7 +186,7 @@ class PlanService {
    * Reset monthly counters (called by cron job)
    * @param {string} tenantSlug - Tenant identifier (optional, resets all if not provided)
    */
-  async resetMonthly Usage(tenantSlug = null) {
+  async resetMonthlyUsage(tenantSlug = null) {
     try {
       const query = tenantSlug 
         ? 'WHERE slug = $1'
