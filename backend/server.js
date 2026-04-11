@@ -99,6 +99,7 @@ const gstRoutes = require('./routes/gstRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const planRoutes = require('./routes/planRoutes');
 
 // API Routes
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit auth endpoints
@@ -117,6 +118,7 @@ app.use('/api/gst', gstRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/plan', planRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

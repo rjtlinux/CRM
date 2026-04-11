@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { formatIndianCurrency } from '../utils/indianFormatters';
 import MobileDashboard from '../components/MobileDashboard';
 import FloatingActionButton from '../components/FloatingActionButton';
+import PlanUsageWidget from '../components/PlanUsageWidget';
 
 const Dashboard = () => {
   const { t } = useLanguage();
@@ -259,48 +260,56 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* New Metrics Row - Clickable */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div 
-          onClick={() => handleTileClick('total_leads')}
-          className="card bg-gradient-to-br from-cyan-500 to-cyan-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
-        >
-          <div className="text-sm opacity-90">{t('totalLeads')}</div>
-          <div className="text-3xl font-bold mt-2">
-            {leadsData.total}
-          </div>
-          <div className="text-sm mt-2 opacity-90">
-            {t('allLeadsInSystem')}
-          </div>
-          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
+      {/* Plan Usage & Metrics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Plan Usage Widget */}
+        <div className="lg:col-span-1">
+          <PlanUsageWidget />
         </div>
+        
+        {/* Metrics Cards */}
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div 
+            onClick={() => handleTileClick('total_leads')}
+            className="card bg-gradient-to-br from-cyan-500 to-cyan-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+          >
+            <div className="text-sm opacity-90">{t('totalLeads')}</div>
+            <div className="text-3xl font-bold mt-2">
+              {leadsData.total}
+            </div>
+            <div className="text-sm mt-2 opacity-90">
+              {t('allLeadsInSystem')}
+            </div>
+            <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
+          </div>
 
-        <div 
-          onClick={() => handleTileClick('active_leads')}
-          className="card bg-gradient-to-br from-teal-500 to-teal-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
-        >
-          <div className="text-sm opacity-90">{t('activeLeads')}</div>
-          <div className="text-3xl font-bold mt-2">
-            {leadsData.active}
+          <div 
+            onClick={() => handleTileClick('active_leads')}
+            className="card bg-gradient-to-br from-teal-500 to-teal-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+          >
+            <div className="text-sm opacity-90">{t('activeLeads')}</div>
+            <div className="text-3xl font-bold mt-2">
+              {leadsData.active}
+            </div>
+            <div className="text-sm mt-2 opacity-90">
+              {t('currentlyBeingPursued')}
+            </div>
+            <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
           </div>
-          <div className="text-sm mt-2 opacity-90">
-            {t('currentlyBeingPursued')}
-          </div>
-          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
-        </div>
 
-        <div 
-          onClick={() => handleTileClick('high_value_deals')}
-          className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
-        >
-          <div className="text-sm opacity-90">{t('highValueDeals')}</div>
-          <div className="text-3xl font-bold mt-2">
-            {highValueDeals.length}
+          <div 
+            onClick={() => handleTileClick('high_value_deals')}
+            className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200"
+          >
+            <div className="text-sm opacity-90">{t('highValueDeals')}</div>
+            <div className="text-3xl font-bold mt-2">
+              {highValueDeals.length}
+            </div>
+            <div className="text-sm mt-2 opacity-90">
+              {t('dealsOver30000')}
+            </div>
+            <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
           </div>
-          <div className="text-sm mt-2 opacity-90">
-            {t('dealsOver30000')}
-          </div>
-          <div className="text-xs mt-2 opacity-75">{t('clickToViewDetails')}</div>
         </div>
       </div>
 
