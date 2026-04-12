@@ -3,6 +3,7 @@ const multer = require('multer');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { aiRateLimiter } = require('../middleware/aiRateLimit');
+const { checkPlanFeature } = require('../middleware/planEnforcement');
 const {
   processVoiceCommand,
   getChatResponse,
@@ -24,8 +25,8 @@ const upload = multer({
 router.use(authenticateToken);
 router.use(aiRateLimiter);
 
-// voice-command accepts optional audio file OR plain JSON text
-router.post('/voice-command', upload.single('audio'), processVoiceCommand);
+// Voice command requires ai_voice feature
+router.post('/voice-command', checkPlanFeature('ai_voice'), upload.single('audio'), processVoiceCommand);
 router.post('/chat', getChatResponse);
 router.post('/smart-reminder', generateSmartReminder);
 router.post('/suggest', suggestDataEntry);

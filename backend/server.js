@@ -24,22 +24,20 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration - Whitelist specific origins only
-const allowedOrigins = [
-  'https://acme.buzeye.com',
-  'https://admin.buzeye.com',
-  'https://buzeye.com',
-  'http://localhost:5173', // Local development
-  'http://localhost:3000', // Local development
-  process.env.NODE_ENV === 'development' ? 'http://localhost:5180' : null,
-].filter(Boolean);
-
+// CORS configuration - Allow all buzeye.com subdomains
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, Postman, curl)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    // Allow all buzeye.com subdomains and localhost
+    if (
+      origin.endsWith('.buzeye.com') || 
+      origin === 'https://buzeye.com' ||
+      origin === 'http://localhost:5173' ||
+      origin === 'http://localhost:3000' ||
+      origin.includes('localhost')
+    ) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked request from origin: ${origin}`);
