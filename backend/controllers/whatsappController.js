@@ -199,12 +199,20 @@ const getConversationDetail = async (req, res) => {
 // ─── GET WHATSAPP CONFIG STATUS ───────────────────────────────────────────────
 
 const getConfig = async (req, res) => {
-  const isConfigured = !!(PHONE_NUMBER_ID && ACCESS_TOKEN);
-  res.json({
-    configured: isConfigured,
-    phone_number_id: PHONE_NUMBER_ID || null,
-    display_phone: isConfigured ? '+1 555-164-6700' : null, // fetch from Meta in prod
-  });
+  try {
+    const config = await getWhatsAppConfig();
+    res.json({
+      configured: true,
+      phone_number_id: config.phone_number_id || null,
+      display_phone: '+1 555-164-6700', // fetch from Meta in prod
+    });
+  } catch (error) {
+    res.json({
+      configured: false,
+      phone_number_id: null,
+      display_phone: null,
+    });
+  }
 };
 
 module.exports = {
