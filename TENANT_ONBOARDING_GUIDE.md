@@ -314,7 +314,7 @@ backend:
     MASTER_DB_PORT: 5432
     MASTER_DB_NAME: crm_master
     MASTER_DB_USER: crm_user
-    MASTER_DB_PASSWORD: CRMSecure2026
+    MASTER_DB_PASSWORD: crm_password
 ```
 
 ### Step 3.3: OpenAI API Key Configuration
