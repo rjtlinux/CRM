@@ -59,7 +59,7 @@ const processWhatsAppReminders = async () => {
         const phoneSource = reminder.admin_whatsapp_phone ? 'admin phone' : 'default business number';
         
         // Send WhatsApp message to ADMIN (not customer)
-        await sendWhatsAppMessage(targetPhone, message);
+        await sendWhatsAppMessage(PHONE_NUMBER_ID, ACCESS_TOKEN, targetPhone, message);
         console.log(`[WhatsApp Scheduler] Sent reminder to ${phoneSource}: ${targetPhone}`);
         
         // Mark as sent
