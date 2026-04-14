@@ -112,13 +112,24 @@ const Followups = () => {
   const openModal = (followup = null) => {
     if (followup) {
       setEditingFollowup(followup);
+      
+      // Parse UTC date and convert to local datetime-local format
+      const utcDate = new Date(followup.followup_date + 'Z'); // Add Z to ensure it's treated as UTC
+      // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+      const year = utcDate.getFullYear();
+      const month = String(utcDate.getMonth() + 1).padStart(2, '0');
+      const day = String(utcDate.getDate()).padStart(2, '0');
+      const hours = String(utcDate.getHours()).padStart(2, '0');
+      const minutes = String(utcDate.getMinutes()).padStart(2, '0');
+      const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+      
       setFormData({
         related_to: followup.customer_id ? 'customer' : followup.opportunity_id ? 'opportunity' : followup.lead_id ? 'lead' : 'other',
         opportunity_id: followup.opportunity_id || '',
         lead_id: followup.lead_id || '',
         customer_id: followup.customer_id || '',
         assigned_to: followup.assigned_to,
-        followup_date: new Date(followup.followup_date).toISOString().slice(0, 16),
+        followup_date: localDateTime,
         followup_type: followup.followup_type,
         status: followup.status,
         notes: followup.notes || '',
@@ -179,8 +190,8 @@ const Followups = () => {
     return icons[type] || '📝';
   };
 
-  const missedCount = followups.filter(f => f.status === 'pending' && new Date(f.followup_date) < new Date()).length;
-  const upcomingCount = followups.filter(f => f.status === 'pending' && new Date(f.followup_date) >= new Date()).length;
+  const missedCount = followups.filter(f => f.status === 'pending' && new Date(f.followup_date + 'Z') < new Date()).length;
+  const upcomingCount = followups.filter(f => f.status === 'pending' && new Date(f.followup_date + 'Z') >= new Date()).length;
   const completedCount = followups.filter(f => f.status === 'completed').length;
 
   if (loading) {
@@ -249,7 +260,7 @@ const Followups = () => {
                 </tr>
               ) : (
                 followups.map((followup) => {
-                  const isPast = new Date(followup.followup_date) < new Date();
+                  const isPast = new Date(followup.followup_date + 'Z') < new Date();
                   const isMissed = followup.status === 'pending' && isPast;
                   
                   return (

@@ -135,16 +135,31 @@ const createFollowup = async (req, res) => {
 const updateFollowup = async (req, res) => {
   try {
     const { id } = req.params;
-    const { assigned_to, followup_date, followup_type, status, notes } = req.body;
+    const { 
+      customer_id, 
+      opportunity_id, 
+      lead_id, 
+      assigned_to, 
+      followup_date, 
+      followup_type, 
+      status, 
+      notes 
+    } = req.body;
     
     const result = await pool.query(
       `UPDATE followups 
-       SET assigned_to = $1, followup_date = $2, followup_type = $3, 
-           status = $4, notes = $5,
-           completed_at = CASE WHEN $4 = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END
-       WHERE id = $6
+       SET customer_id = $1,
+           opportunity_id = $2,
+           lead_id = $3,
+           assigned_to = $4, 
+           followup_date = $5, 
+           followup_type = $6, 
+           status = $7, 
+           notes = $8,
+           completed_at = CASE WHEN $7 = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END
+       WHERE id = $9
        RETURNING *`,
-      [assigned_to, followup_date, followup_type, status, notes, id]
+      [customer_id || null, opportunity_id || null, lead_id || null, assigned_to, followup_date, followup_type, status, notes, id]
     );
     
     if (result.rows.length === 0) {
