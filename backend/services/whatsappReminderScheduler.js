@@ -10,6 +10,10 @@ const { sendWhatsAppMessage } = require('../utils/whatsappSender');
 // Default WhatsApp number (business chatbot number)
 const DEFAULT_WHATSAPP_NUMBER = process.env.DEFAULT_ADMIN_WHATSAPP || '15551646700'; // +1 (555) 164-6700
 
+// WhatsApp API credentials
+const PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID;
+const ACCESS_TOKEN = process.env.WA_ACCESS_TOKEN;
+
 const processWhatsAppReminders = async () => {
   try {
     console.log('[WhatsApp Scheduler] Checking for pending reminders...');
@@ -51,7 +55,7 @@ const processWhatsAppReminders = async () => {
         const message = buildReminderMessage(reminder);
         
         // Use admin WhatsApp phone if set, otherwise use default business number
-        const targetPhone = reminder.admin_whatsapp_phone || DEFAULT_WHATSAPP_NUMBER;
+        const targetPhone = remindPHONE_NUMBER_ID, ACCESS_TOKEN, er.admin_whatsapp_phone || DEFAULT_WHATSAPP_NUMBER;
         const phoneSource = reminder.admin_whatsapp_phone ? 'admin phone' : 'default business number';
         
         // Send WhatsApp message to ADMIN (not customer)
