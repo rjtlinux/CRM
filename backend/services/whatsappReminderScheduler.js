@@ -16,6 +16,7 @@ const processWhatsAppReminders = async () => {
     
     // Get pending WhatsApp reminders - don't filter by admin_whatsapp_phone
     // We'll use fallback for reminders without it
+    // Note: followup_date is stored without timezone, so we cast CURRENT_TIMESTAMP to match
     const result = await pool.query(`
       SELECT f.id, f.customer_id, f.opportunity_id, f.lead_id,
              f.assigned_to, f.followup_date, f.followup_type,
@@ -32,7 +33,7 @@ const processWhatsAppReminders = async () => {
       WHERE f.followup_type = 'whatsapp_reminder'
         AND f.status = 'pending'
         AND f.reminder_sent = FALSE
-        AND f.followup_date <= CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+        AND f.followup_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::timestamp + INTERVAL '5 minutes'
       ORDER BY f.followup_date ASC
       LIMIT 50
     `);
