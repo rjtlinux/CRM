@@ -34,6 +34,7 @@ const getAllFollowups = async (req, res) => {
     query += ' ORDER BY f.followup_date ASC';
     
     const result = await pool.query(query, params);
+    console.log('[GET FOLLOWUPS] Sample row:', result.rows[0]);
     res.json({ followups: result.rows });
   } catch (error) {
     console.error('Get followups error:', error);
