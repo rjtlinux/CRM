@@ -193,9 +193,9 @@ const Followups = () => {
     };
     return icons[type] || '📝';
   };
-.replace('Z', '')) < new Date()).length;
-  const upcomingCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date.replace('Z', '')< new Date()).length;
-  const upcomingCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date) >= new Date()).length;
+
+  const missedCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date.replace('Z', '')) < new Date()).length;
+  const upcomingCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date.replace('Z', '')) >= new Date()).length;
   const completedCount = followups.filter(f => f.status === 'completed').length;
 
   if (loading) {
