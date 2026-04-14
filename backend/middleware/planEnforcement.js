@@ -2,15 +2,20 @@ const planService = require('../services/planService');
 
 /**
  * Extract tenant slug from request
- * Checks subdomain from host header
+ * Checks environment variable first, then subdomain from host header
  */
 function extractTenantFromRequest(req) {
-  // Option 1: From JWT (if we added tenantSlug during login)
+  // Option 1: From environment variable (for tenant-specific backends)
+  if (process.env.TENANT_SLUG) {
+    return process.env.TENANT_SLUG;
+  }
+  
+  // Option 2: From JWT (if we added tenantSlug during login)
   if (req.user && req.user.tenantSlug) {
     return req.user.tenantSlug;
   }
   
-  // Option 2: From subdomain
+  // Option 3: From subdomain
   const host = req.get('host') || '';
   const parts = host.split('.');
   
