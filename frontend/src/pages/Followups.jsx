@@ -263,7 +263,7 @@ const Followups = () => {
                   </td>
                 </tr>
               ) : (
-                followups.map((followup) => {
+                followups.map((followup) => {.replace('Z', '')
                   const isPast = followup.followup_date && new Date(followup.followup_date) < new Date();
                   const isMissed = followup.status === 'pending' && isPast;
                   
