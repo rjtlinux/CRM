@@ -146,6 +146,11 @@ const updateFollowup = async (req, res) => {
       notes 
     } = req.body;
     
+    console.log('[UPDATE FOLLOWUP] ID:', id, 'Data:', {
+      customer_id, opportunity_id, lead_id, assigned_to, 
+      followup_date, followup_type, status, notes
+    });
+    
     const result = await pool.query(
       `UPDATE followups 
        SET customer_id = $1,
