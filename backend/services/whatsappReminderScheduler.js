@@ -28,7 +28,28 @@ const processWhatsAppReminders = async () => {
       LEFT JOIN customers c ON f.customer_id = c.id
       LEFT JOIN opportunities o ON f.opportunity_id = o.id
       LEFT JOIN leads l ON f.lead_id = l.id
-      LEFT Use admin WhatsApp phone if set, otherwise use default business number
+      LEFT JOIN users u ON f.assigned_to = u.id
+      WHERE f.followup_type = 'whatsapp_reminder'
+        AND f.status = 'pending'
+        AND f.reminder_sent = FALSE
+        AND f.followup_date <= CURRENT_TIMESTAMP + INTERVAL '5 minutes'
+      ORDER BY f.followup_date ASC
+      LIMIT 50
+    `);
+    
+    if (result.rows.length === 0) {
+      console.log('[WhatsApp Scheduler] No pending reminders');
+      return;
+    }
+    
+    console.log(`[WhatsApp Scheduler] Found ${result.rows.length} pending reminders`);
+    
+    for (const reminder of result.rows) {
+      try {
+        // Build reminder message
+        const message = buildReminderMessage(reminder);
+        
+        // Use admin WhatsApp phone if set, otherwise use default business number
         const targetPhone = reminder.admin_whatsapp_phone || DEFAULT_WHATSAPP_NUMBER;
         const phoneSource = reminder.admin_whatsapp_phone ? 'admin phone' : 'default business number';
         
@@ -42,28 +63,7 @@ const processWhatsAppReminders = async () => {
            SET reminder_sent = TRUE
            WHERE id = $1`,
           [reminder.id]
-        ); console.log(`[WhatsApp Scheduler] Sent reminder to admin at ${reminder.target_phone}`);
-          
-          // Mark as sent
-          await pool.query(
-            `UPDATE followups 
-             SET reminder_sent = TRUE
-             WHERE id = $1`,
-            [reminder.id]
-          );
-        } else {
-          console.warn(`[WhatsApp Scheduler] No admin WhatsApp number for reminder ${reminder.id}`);
-          
-          // Mark as failed (no phone number)
-          await pool.query(
-            `UPDATE followups 
-             SET reminder_sent = TRUE, 
-                 status = 'missed',
-                 notes = CONCAT(COALESCE(notes, ''), ' [Failed: No admin WhatsApp number]')
-             WHERE id = $1`,
-            [reminder.id]
-          );
-        }
+        );
       } catch (error) {
         console.error(`[WhatsApp Scheduler] Error sending reminder ${reminder.id}:`, error);
         
@@ -72,8 +72,8 @@ const processWhatsAppReminders = async () => {
           `UPDATE followups 
            SET reminder_sent = TRUE, 
                status = 'missed',
-               notes = CONCAT(notes, ' [Failed: ', $2, ']')
-           WHERE id = $1`,COALESCE(notes, '')
+               notes = CONCAT(COALESCE(notes, ''), ' [Failed: ', $2, ']')
+           WHERE id = $1`,
           [reminder.id, error.message.substring(0, 100)]
         );
       }
