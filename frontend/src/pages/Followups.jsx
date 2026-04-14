@@ -282,12 +282,16 @@ const Followups = () => {
                       </td>
                       <td className="py-3 px-4">{followup.assigned_to_name}</td>
                       <td className="py-3 px-4">
-                        <div>
-                          <div>{new Date(followup.followup_date + 'Z').toLocaleDateString()}</div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(followup.followup_date + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {followup.followup_date ? (
+                          <div>
+                            <div>{new Date(followup.followup_date + 'Z').toLocaleDateString()}</div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(followup.followup_date + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="text-gray-400">-</div>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(followup.status)}`}>
