@@ -114,14 +114,17 @@ const Followups = () => {
       setEditingFollowup(followup);
       
       // Parse UTC date and convert to local datetime-local format
-      const utcDate = new Date(followup.followup_date + 'Z'); // Add Z to ensure it's treated as UTC
-      // Format for datetime-local input (YYYY-MM-DDTHH:mm)
-      const year = utcDate.getFullYear();
-      const month = String(utcDate.getMonth() + 1).padStart(2, '0');
-      const day = String(utcDate.getDate()).padStart(2, '0');
-      const hours = String(utcDate.getHours()).padStart(2, '0');
-      const minutes = String(utcDate.getMinutes()).padStart(2, '0');
-      const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+      let localDateTime = '';
+      if (followup.followup_date) {
+        const utcDate = new Date(followup.followup_date + 'Z'); // Add Z to ensure it's treated as UTC
+        // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+        const year = utcDate.getFullYear();
+        const month = String(utcDate.getMonth() + 1).padStart(2, '0');
+        const day = String(utcDate.getDate()).padStart(2, '0');
+        const hours = String(utcDate.getHours()).padStart(2, '0');
+        const minutes = String(utcDate.getMinutes()).padStart(2, '0');
+        localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
       
       setFormData({
         related_to: followup.customer_id ? 'customer' : followup.opportunity_id ? 'opportunity' : followup.lead_id ? 'lead' : 'other',
@@ -190,8 +193,8 @@ const Followups = () => {
     return icons[type] || '📝';
   };
 
-  const missedCount = followups.filter(f => f.status === 'pending' && new Date(f.followup_date + 'Z') < new Date()).length;
-  const upcomingCount = followups.filter(f => f.status === 'pending' && new Date(f.followup_date + 'Z') >= new Date()).length;
+  const missedCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date + 'Z') < new Date()).length;
+  const upcomingCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date + 'Z') >= new Date()).length;
   const completedCount = followups.filter(f => f.status === 'completed').length;
 
   if (loading) {
@@ -260,7 +263,7 @@ const Followups = () => {
                 </tr>
               ) : (
                 followups.map((followup) => {
-                  const isPast = new Date(followup.followup_date + 'Z') < new Date();
+                  const isPast = followup.followup_date && new Date(followup.followup_date + 'Z') < new Date();
                   const isMissed = followup.status === 'pending' && isPast;
                   
                   return (
