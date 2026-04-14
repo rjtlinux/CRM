@@ -247,16 +247,16 @@ const AI_TOOLS = [
     type: 'function',
     function: {
       name: 'create_followup',
-      description: 'Create a follow-up reminder for a customer. Can set WhatsApp reminder type to send message automatically at scheduled time.',
+      description: 'Create a follow-up reminder. Can be linked to a customer OR created as generic "other" type. Can set WhatsApp reminder type to send message automatically at scheduled time.',
       parameters: {
         type: 'object',
         properties: {
-          customer_name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
-          followup_date: { type: 'string', description: 'When to follow up - format: YYYY-MM-DD HH:MM or natural language like "tomorrow 2pm", "next monday 10am"' },
+          customer_name: { type: 'string', description: 'Customer name (optional - if not provided, creates generic "other" type followup). Hindi or English both accepted.' },
+          followup_date: { type: 'string', description: 'When to follow up - format: YYYY-MM-DD HH:MM or natural language like "tomorrow 2pm", "aaj 9 bje" (today 9), "next monday 10am"' },
           followup_type: { type: 'string', enum: ['call', 'email', 'meeting', 'whatsapp_reminder'], description: 'Type of follow-up. Use whatsapp_reminder to send automatic WhatsApp message' },
           notes: { type: 'string', description: 'Reminder notes - what to follow up about' },
         },
-        required: ['customer_name', 'followup_date', 'followup_type'],
+        required: ['followup_date', 'followup_type'],
       },
     },
   },
@@ -274,6 +274,7 @@ RULE 3 — Customer not found: You CANNOT add new customers. If a tool returns c
   - If the tool returns "suggestions" (similar names), show them to the user and ask "Did you mean one of these?" Let the user pick.
   - If no suggestions, tell the user immediately: "This customer is not in the system. Please add them from the Customers page first."
   - NEVER offer to create customers yourself.
+  - FOR FOLLOW-UPS ONLY: If customer not found but user wants a generic reminder (like "kushal ko phone karna hai"), create a follow-up WITHOUT customer (customer_name can be omitted). This creates an "other" type follow-up.
 
 RULE 4 — Fuzzy names: If the user gives an unclear or partial name, STILL call the tool — the system does fuzzy matching and will return close matches if any.
 
@@ -466,8 +467,16 @@ const executeTool = async (name, args, userId, adminWhatsappPhone = null) => {
     }
 
     case 'create_followup': {
-      const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
-      if (!ok) return customerNotFound(args.customer_name, result);
+      // Customer is OPTIONAL - if not provided, create "other" type followup
+      let customerId = null;
+      let customerName = 'Other';
+      
+      if (args.customer_name) {
+        const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
+        if (!ok) return customerNotFound(args.customer_name, result);
+        customerId = c.id;
+        customerName = c.company_name;
+      }
       
       // Parse followup date - handle natural language
       let followupDate = args.followup_date;
@@ -476,36 +485,60 @@ const executeTool = async (name, args, userId, adminWhatsappPhone = null) => {
       const now = new Date();
       const lower = followupDate.toLowerCase();
       
-      if (lower.includes('tomorrow')) {
+      // Helper function to parse time and choose next occurrence
+      const parseTimeSmartly = (dateObj, timeStr) => {
+        // Match patterns like "9", "9.15", "9:15", "9 bje", with optional AM/PM
+        const timeMatch = timeStr.match(/(\d+)[:.](\d+)\s*(am|pm|bje)?|(\d+)\s*(am|pm|bje)?/);
+        if (!timeMatch) return dateObj;
+        
+        let hour, minute = 0;
+        const hasAmPm = timeMatch[3] === 'am' || timeMatch[3] === 'pm' || timeMatch[5] === 'am' || timeMatch[5] === 'pm';
+        
+        if (timeMatch[1]) {
+          // Format like "9:15" or "9.15"
+          hour = parseInt(timeMatch[1]);
+          minute = parseInt(timeMatch[2]);
+          const ampm = timeMatch[3];
+          if (ampm === 'pm' && hour !== 12) hour += 12;
+          if (ampm === 'am' && hour === 12) hour = 0;
+        } else {
+          // Format like "9"
+          hour = parseInt(timeMatch[4]);
+          const ampm = timeMatch[5];
+          if (ampm === 'pm' && hour !== 12) hour += 12;
+          if (ampm === 'am' && hour === 12) hour = 0;
+        }
+        
+        // If no AM/PM specified, choose the NEXT upcoming occurrence
+        if (!hasAmPm) {
+          const currentHour = now.getHours();
+          // If the hour has passed today, use PM (add 12), otherwise use the hour as-is
+          if (hour < 12 && hour <= currentHour) {
+            // Hour has passed or is current - try PM
+            hour += 12;
+          }
+          // If still in the past (like 9 PM when it's 10 PM), it means tomorrow
+          if (hour < currentHour || (hour === currentHour && now.getMinutes() >= minute)) {
+            dateObj.setDate(dateObj.getDate() + 1);
+          }
+        }
+        
+        dateObj.setHours(hour, minute, 0, 0);
+        return dateObj;
+      };
+      
+      if (lower.includes('tomorrow') || lower.includes('kal')) {
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const timeMatch = lower.match(/(\d+)\s*(am|pm)/);
-        if (timeMatch) {
-          let hour = parseInt(timeMatch[1]);
-          if (timeMatch[2] === 'pm' && hour !== 12) hour += 12;
-          if (timeMatch[2] === 'am' && hour === 12) hour = 0;
-          tomorrow.setHours(hour, 0, 0, 0);
-        } else {
-          tomorrow.setHours(10, 0, 0, 0); // default 10 AM
-        }
-        followupDate = tomorrow.toISOString();
+        followupDate = parseTimeSmartly(tomorrow, lower).toISOString();
       } else if (lower.includes('next week') || lower.includes('next monday')) {
         const nextWeek = new Date(now);
         nextWeek.setDate(nextWeek.getDate() + 7);
         nextWeek.setHours(10, 0, 0, 0);
         followupDate = nextWeek.toISOString();
-      } else if (lower.includes('today')) {
+      } else if (lower.includes('today') || lower.includes('aaj')) {
         const today = new Date(now);
-        const timeMatch = lower.match(/(\d+)\s*(am|pm)/);
-        if (timeMatch) {
-          let hour = parseInt(timeMatch[1]);
-          if (timeMatch[2] === 'pm' && hour !== 12) hour += 12;
-          if (timeMatch[2] === 'am' && hour === 12) hour = 0;
-          today.setHours(hour, 0, 0, 0);
-        } else {
-          today.setHours(now.getHours() + 1, 0, 0, 0); // default 1 hour from now
-        }
-        followupDate = today.toISOString();
+        followupDate = parseTimeSmartly(today, lower).toISOString();
       }
       // Otherwise use the date as-is (should be ISO format from AI)
       
@@ -518,13 +551,13 @@ const executeTool = async (name, args, userId, adminWhatsappPhone = null) => {
          (customer_id, assigned_to, followup_date, followup_type, status, notes, admin_whatsapp_phone, created_by)
          VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7)
          RETURNING id, followup_date`,
-        [c.id, userId, followupDate, args.followup_type, args.notes || '', adminPhone, userId]
+        [customerId, userId, followupDate, args.followup_type, args.notes || '', adminPhone, userId]
       );
       
       return JSON.stringify({
         status: 'success',
         action: 'followup_created',
-        customer: c.company_name,
+        customer: customerName,
         followup_id: followupResult.rows[0].id,
         followup_type: args.followup_type,
         scheduled_for: followupResult.rows[0].followup_date,
