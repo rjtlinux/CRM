@@ -59,7 +59,7 @@ const processWhatsAppReminders = async () => {
     
     console.log(`[WhatsApp Scheduler] Found ${result.rows.length} pending reminders`);
     
-    for (const reminder of result.credentials.phone_number_id, credentials.access_token
+    for (const reminder of result.rows) {
       try {
         // Build reminder message
         const message = buildReminderMessage(reminder);
