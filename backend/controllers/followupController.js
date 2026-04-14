@@ -6,10 +6,16 @@ const getAllFollowups = async (req, res) => {
     let query = `
       SELECT f.*,
              u.full_name as assigned_to_name,
-             COALESCE(o.title, l.name) as related_to_name,
-             CASE WHEN f.opportunity_id IS NOT NULL THEN 'opportunity' ELSE 'lead' END as related_type
+             COALESCE(c.company_name, o.title, l.name) as related_to_name,
+             CASE 
+               WHEN f.customer_id IS NOT NULL THEN 'customer'
+               WHEN f.opportunity_id IS NOT NULL THEN 'opportunity' 
+               WHEN f.lead_id IS NOT NULL THEN 'lead'
+               ELSE 'other'
+             END as related_type
       FROM followups f
       LEFT JOIN users u ON f.assigned_to = u.id
+      LEFT JOIN customers c ON f.customer_id = c.id
       LEFT JOIN opportunities o ON f.opportunity_id = o.id
       LEFT JOIN leads l ON f.lead_id = l.id
       WHERE 1=1
@@ -40,10 +46,16 @@ const getMissedFollowups = async (req, res) => {
     const result = await pool.query(`
       SELECT f.*,
              u.full_name as assigned_to_name,
-             COALESCE(o.title, l.name) as related_to_name,
-             CASE WHEN f.opportunity_id IS NOT NULL THEN 'opportunity' ELSE 'lead' END as related_type
+             COALESCE(c.company_name, o.title, l.name) as related_to_name,
+             CASE 
+               WHEN f.customer_id IS NOT NULL THEN 'customer'
+               WHEN f.opportunity_id IS NOT NULL THEN 'opportunity' 
+               WHEN f.lead_id IS NOT NULL THEN 'lead'
+               ELSE 'other'
+             END as related_type
       FROM followups f
       LEFT JOIN users u ON f.assigned_to = u.id
+      LEFT JOIN customers c ON f.customer_id = c.id
       LEFT JOIN opportunities o ON f.opportunity_id = o.id
       LEFT JOIN leads l ON f.lead_id = l.id
       WHERE f.status = 'pending' 
@@ -64,10 +76,16 @@ const getUpcomingFollowups = async (req, res) => {
     const result = await pool.query(`
       SELECT f.*,
              u.full_name as assigned_to_name,
-             COALESCE(o.title, l.name) as related_to_name,
-             CASE WHEN f.opportunity_id IS NOT NULL THEN 'opportunity' ELSE 'lead' END as related_type
+             COALESCE(c.company_name, o.title, l.name) as related_to_name,
+             CASE 
+               WHEN f.customer_id IS NOT NULL THEN 'customer'
+               WHEN f.opportunity_id IS NOT NULL THEN 'opportunity' 
+               WHEN f.lead_id IS NOT NULL THEN 'lead'
+               ELSE 'other'
+             END as related_type
       FROM followups f
       LEFT JOIN users u ON f.assigned_to = u.id
+      LEFT JOIN customers c ON f.customer_id = c.id
       LEFT JOIN opportunities o ON f.opportunity_id = o.id
       LEFT JOIN leads l ON f.lead_id = l.id
       WHERE f.status = 'pending' 
@@ -85,16 +103,16 @@ const getUpcomingFollowups = async (req, res) => {
 const createFollowup = async (req, res) => {
   try {
     const {
-      opportunity_id, lead_id, assigned_to, followup_date,
-      followup_type, status, notes
+      customer_id, opportunity_id, lead_id, assigned_to, followup_date,
+      followup_type, status, notes, admin_whatsapp_phone
     } = req.body;
     
     const result = await pool.query(
       `INSERT INTO followups 
-       (opportunity_id, lead_id, assigned_to, followup_date, followup_type, status, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (customer_id, opportunity_id, lead_id, assigned_to, followup_date, followup_type, status, notes, admin_whatsapp_phone, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [opportunity_id, lead_id, assigned_to, followup_date, followup_type, status, notes, req.user.id]
+      [customer_id, opportunity_id, lead_id, assigned_to, followup_date, followup_type, status, notes, admin_whatsapp_phone, req.user.id]
     );
     
     // Create reminder

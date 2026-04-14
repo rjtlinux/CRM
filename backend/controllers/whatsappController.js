@@ -122,11 +122,13 @@ const handleIncomingMessage = async (req, res) => {
     const userId = adminUser.rows[0]?.id || 1;
 
     // Run the same AI agentic loop as the portal
+    // Pass waPhone so admin gets WhatsApp reminders in this chat
     const { response, cleanHistory } = await runAgenticLoop(
       systemPrompt,
       history,
       userText,
-      userId
+      userId,
+      waPhone  // Admin's WhatsApp number for followup reminders
     );
 
     // Save updated history to DB

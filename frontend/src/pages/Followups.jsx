@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { followupsAPI, opportunitiesAPI, leadsAPI, usersAPI } from '../services/api';
+import { followupsAPI, opportunitiesAPI, leadsAPI, usersAPI, customersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -9,6 +9,7 @@ const Followups = () => {
   const [followups, setFollowups] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -16,9 +17,10 @@ const Followups = () => {
   const [filter, setFilter] = useState('all'); // all, upcoming, missed
   
   const [formData, setFormData] = useState({
-    related_to: 'opportunity', // opportunity or lead
+    related_to: 'opportunity', // opportunity, lead, customer, or other
     opportunity_id: '',
     lead_id: '',
+    customer_id: '',
     assigned_to: '',
     followup_date: '',
     followup_type: 'call',
@@ -43,15 +45,17 @@ const Followups = () => {
         followupsRes = await followupsAPI.getAll();
       }
       
-      const [oppsRes, leadsRes, usersRes] = await Promise.all([
+      const [oppsRes, leadsRes, customersRes, usersRes] = await Promise.all([
         opportunitiesAPI.getAll(),
         leadsAPI.getAll(),
+        customersAPI.getAll(),
         usersAPI.getAll().catch(() => ({ data: { users: [] } })),
       ]);
       
       setFollowups(followupsRes.data.followups || followupsRes.data.upcoming_followups || followupsRes.data.missed_followups || []);
       setOpportunities(oppsRes.data.opportunities);
       setLeads(leadsRes.data.leads);
+      setCustomers(customersRes.data.customers || []);
       setUsers(usersRes.data.users || []);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -67,6 +71,7 @@ const Followups = () => {
         ...formData,
         opportunity_id: formData.related_to === 'opportunity' ? formData.opportunity_id : null,
         lead_id: formData.related_to === 'lead' ? formData.lead_id : null,
+        customer_id: formData.related_to === 'customer' ? formData.customer_id : null,
       };
 
       if (editingFollowup) {
@@ -108,9 +113,10 @@ const Followups = () => {
     if (followup) {
       setEditingFollowup(followup);
       setFormData({
-        related_to: followup.opportunity_id ? 'opportunity' : 'lead',
+        related_to: followup.customer_id ? 'customer' : followup.opportunity_id ? 'opportunity' : followup.lead_id ? 'lead' : 'other',
         opportunity_id: followup.opportunity_id || '',
         lead_id: followup.lead_id || '',
+        customer_id: followup.customer_id || '',
         assigned_to: followup.assigned_to,
         followup_date: new Date(followup.followup_date).toISOString().slice(0, 16),
         followup_type: followup.followup_type,
@@ -125,9 +131,10 @@ const Followups = () => {
       tomorrow.setHours(10, 0, 0, 0);
       
       setFormData({
-        related_to: 'opportunity',
+        related_to: 'customer',
         opportunity_id: '',
         lead_id: '',
+        customer_id: '',
         assigned_to: user?.id || '',
         followup_date: tomorrow.toISOString().slice(0, 16),
         followup_type: 'call',
@@ -167,6 +174,7 @@ const Followups = () => {
       meeting: '🤝',
       demo: '💻',
       followup: '🔄',
+      whatsapp_reminder: '💬',
     };
     return icons[type] || '📝';
   };
@@ -332,47 +340,66 @@ const Followups = () => {
                     className="input-field"
                     required
                   >
-                    <option value="opportunity">{t('opportunity')}</option>
-                    <option value="lead">{t('lead')}</option>
+                    <option value="customer">👤 Customer</option>
+                    <option value="opportunity">💼 {t('opportunity')}</option>
+                    <option value="lead">🎯 {t('lead')}</option>
+                    <option value="other">📋 Other</option>
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {formData.related_to === 'opportunity' ? t('opportunity') : t('lead')} *
-                  </label>
-                  {formData.related_to === 'opportunity' ? (
-                    <select
-                      name="opportunity_id"
-                      value={formData.opportunity_id}
-                      onChange={handleChange}
-                      className="input-field"
-                      required
-                    >
-                      <option value="">{t('selectOpportunity')}</option>
-                      {opportunities.map((opp) => (
-                        <option key={opp.id} value={opp.id}>
-                          {opp.title} - {opp.customer_name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      name="lead_id"
-                      value={formData.lead_id}
-                      onChange={handleChange}
-                      className="input-field"
-                      required
-                    >
-                      <option value="">{t('selectLead')}</option>
-                      {leads.map((lead) => (
-                        <option key={lead.id} value={lead.id}>
-                          {lead.name} - {lead.company}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+                {formData.related_to !== 'other' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {formData.related_to === 'opportunity' ? t('opportunity') : formData.related_to === 'lead' ? t('lead') : 'Customer'} *
+                    </label>
+                    {formData.related_to === 'opportunity' ? (
+                      <select
+                        name="opportunity_id"
+                        value={formData.opportunity_id}
+                        onChange={handleChange}
+                        className="input-field"
+                        required
+                      >
+                        <option value="">{t('selectOpportunity')}</option>
+                        {opportunities.map((opp) => (
+                          <option key={opp.id} value={opp.id}>
+                            {opp.title} - {opp.customer_name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : formData.related_to === 'lead' ? (
+                      <select
+                        name="lead_id"
+                        value={formData.lead_id}
+                        onChange={handleChange}
+                        className="input-field"
+                        required
+                      >
+                        <option value="">{t('selectLead')}</option>
+                        {leads.map((lead) => (
+                          <option key={lead.id} value={lead.id}>
+                            {lead.name} - {lead.company}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        name="customer_id"
+                        value={formData.customer_id}
+                        onChange={handleChange}
+                        className="input-field"
+                        required
+                      >
+                        <option value="">Select Customer</option>
+                        {customers.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.company_name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Follow-up Details */}
@@ -428,6 +455,7 @@ const Followups = () => {
                     <option value="email">📧 {t('email')}</option>
                     <option value="meeting">🤝 {t('meeting')}</option>
                     <option value="demo">💻 {t('demo')}</option>
+                    <option value="whatsapp_reminder">💬 WhatsApp Reminder</option>
                     <option value="followup">🔄 {t('followup')}</option>
                   </select>
                 </div>

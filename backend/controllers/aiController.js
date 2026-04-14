@@ -243,6 +243,23 @@ const AI_TOOLS = [
       parameters: { type: 'object', properties: {} },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'create_followup',
+      description: 'Create a follow-up reminder for a customer. Can set WhatsApp reminder type to send message automatically at scheduled time.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_name: { type: 'string', description: 'Customer name (any script — Hindi or English both accepted)' },
+          followup_date: { type: 'string', description: 'When to follow up - format: YYYY-MM-DD HH:MM or natural language like "tomorrow 2pm", "next monday 10am"' },
+          followup_type: { type: 'string', enum: ['call', 'email', 'meeting', 'whatsapp_reminder'], description: 'Type of follow-up. Use whatsapp_reminder to send automatic WhatsApp message' },
+          notes: { type: 'string', description: 'Reminder notes - what to follow up about' },
+        },
+        required: ['customer_name', 'followup_date', 'followup_type'],
+      },
+    },
+  },
 ];
 
 // ─── SYSTEM PROMPT — in English, let GPT naturally handle Hindi ──────────────
@@ -287,7 +304,7 @@ const resolveCustomer = async (name) => {
   return { customer: null, ok: false, result };
 };
 
-const executeTool = async (name, args, userId) => {
+const executeTool = async (name, args, userId, adminWhatsappPhone = null) => {
   switch (name) {
     case 'record_udhar': {
       const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
@@ -448,6 +465,73 @@ const executeTool = async (name, args, userId) => {
       });
     }
 
+    case 'create_followup': {
+      const { customer: c, ok, result } = await resolveCustomer(args.customer_name);
+      if (!ok) return customerNotFound(args.customer_name, result);
+      
+      // Parse followup date - handle natural language
+      let followupDate = args.followup_date;
+      
+      // Simple natural language parsing for common cases
+      const now = new Date();
+      const lower = followupDate.toLowerCase();
+      
+      if (lower.includes('tomorrow')) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const timeMatch = lower.match(/(\d+)\s*(am|pm)/);
+        if (timeMatch) {
+          let hour = parseInt(timeMatch[1]);
+          if (timeMatch[2] === 'pm' && hour !== 12) hour += 12;
+          if (timeMatch[2] === 'am' && hour === 12) hour = 0;
+          tomorrow.setHours(hour, 0, 0, 0);
+        } else {
+          tomorrow.setHours(10, 0, 0, 0); // default 10 AM
+        }
+        followupDate = tomorrow.toISOString();
+      } else if (lower.includes('next week') || lower.includes('next monday')) {
+        const nextWeek = new Date(now);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        nextWeek.setHours(10, 0, 0, 0);
+        followupDate = nextWeek.toISOString();
+      } else if (lower.includes('today')) {
+        const today = new Date(now);
+        const timeMatch = lower.match(/(\d+)\s*(am|pm)/);
+        if (timeMatch) {
+          let hour = parseInt(timeMatch[1]);
+          if (timeMatch[2] === 'pm' && hour !== 12) hour += 12;
+          if (timeMatch[2] === 'am' && hour === 12) hour = 0;
+          today.setHours(hour, 0, 0, 0);
+        } else {
+          today.setHours(now.getHours() + 1, 0, 0, 0); // default 1 hour from now
+        }
+        followupDate = today.toISOString();
+      }
+      // Otherwise use the date as-is (should be ISO format from AI)
+      
+      // Use admin's WhatsApp phone if provided (from WhatsApp conversation)
+      // This way admin gets reminder in same WhatsApp chat where they created the followup
+      const adminPhone = args.followup_type === 'whatsapp_reminder' ? adminWhatsappPhone : null;
+      
+      const followupResult = await pool.query(
+        `INSERT INTO followups 
+         (customer_id, assigned_to, followup_date, followup_type, status, notes, admin_whatsapp_phone, created_by)
+         VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7)
+         RETURNING id, followup_date`,
+        [c.id, userId, followupDate, args.followup_type, args.notes || '', adminPhone, userId]
+      );
+      
+      return JSON.stringify({
+        status: 'success',
+        action: 'followup_created',
+        customer: c.company_name,
+        followup_id: followupResult.rows[0].id,
+        followup_type: args.followup_type,
+        scheduled_for: followupResult.rows[0].followup_date,
+        whatsapp_enabled: args.followup_type === 'whatsapp_reminder',
+      });
+    }
+
     default:
       return JSON.stringify({ status: 'error', message: 'Unknown tool' });
   }
@@ -467,6 +551,7 @@ const summarizeToolResult = (toolName, args, resultJson) => {
         case 'udhar_recorded': return `[Recorded ₹${r.amount} udhar for ${r.customer}, total outstanding: ₹${r.total_outstanding}]`;
         case 'sale_recorded': return `[Recorded ₹${r.amount} cash sale for ${r.customer}]`;
         case 'payment_recorded': return `[Recorded ₹${r.amount} payment from ${r.customer}, remaining: ₹${r.remaining_balance}]`;
+        case 'followup_created': return `[Created ${r.followup_type} follow-up for ${r.customer} on ${new Date(r.scheduled_for).toLocaleString('en-IN')}${r.whatsapp_enabled ? ' (WhatsApp reminder enabled)' : ''}]`;
         default: break;
       }
       if (r.outstanding !== undefined) return `[${r.customer} outstanding: ₹${r.outstanding}]`;
@@ -509,6 +594,8 @@ const buildCleanHistory = (messages) => {
 
 const runAgenticLoop = async (systemPrompt, historyMessages, userText, userId) => {
   const messages = [
+    { role: 'system', content: systemPrompt },, adminWhatsappPhone = null) => {
+  const messages = [
     { role: 'system', content: systemPrompt },
     ...historyMessages.slice(-12),
     { role: 'user', content: userText },
@@ -536,9 +623,7 @@ const runAgenticLoop = async (systemPrompt, historyMessages, userText, userId) =
 
     for (const toolCall of choice.message.tool_calls) {
       const args = JSON.parse(toolCall.function.arguments);
-      const result = await executeTool(toolCall.function.name, args, userId);
-      messages.push({ role: 'tool', tool_call_id: toolCall.id, content: result });
-    }
+      const result = await executeTool(toolCall.function.name, args, userId, adminWhatsappPhone
   }
 
   return { response: 'Thoda aur detail mein batao — kya karna hai?', cleanHistory: [] };
