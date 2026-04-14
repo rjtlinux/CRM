@@ -116,7 +116,7 @@ const Followups = () => {
       // Parse UTC date and convert to local datetime-local format
       let localDateTime = '';
       if (followup.followup_date) {
-        const utcDate = new Date(followup.followup_date + 'Z'); // Add Z to ensure it's treated as UTC
+        const utcDate = new Date(followup.followup_date); // Already in ISO format from API
         // Format for datetime-local input (YYYY-MM-DDTHH:mm)
         const year = utcDate.getFullYear();
         const month = String(utcDate.getMonth() + 1).padStart(2, '0');
@@ -193,8 +193,8 @@ const Followups = () => {
     return icons[type] || '📝';
   };
 
-  const missedCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date + 'Z') < new Date()).length;
-  const upcomingCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date + 'Z') >= new Date()).length;
+  const missedCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date) < new Date()).length;
+  const upcomingCount = followups.filter(f => f.status === 'pending' && f.followup_date && new Date(f.followup_date) >= new Date()).length;
   const completedCount = followups.filter(f => f.status === 'completed').length;
 
   if (loading) {
@@ -263,7 +263,7 @@ const Followups = () => {
                 </tr>
               ) : (
                 followups.map((followup) => {
-                  const isPast = followup.followup_date && new Date(followup.followup_date + 'Z') < new Date();
+                  const isPast = followup.followup_date && new Date(followup.followup_date) < new Date();
                   const isMissed = followup.status === 'pending' && isPast;
                   
                   return (
@@ -287,9 +287,9 @@ const Followups = () => {
                       <td className="py-3 px-4">
                         {followup.followup_date ? (
                           <div>
-                            <div>{new Date(followup.followup_date + 'Z').toLocaleDateString()}</div>
+                            <div>{new Date(followup.followup_date).toLocaleDateString()}</div>
                             <div className="text-xs text-gray-500">
-                              {new Date(followup.followup_date + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(followup.followup_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                         ) : (
