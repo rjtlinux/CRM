@@ -153,10 +153,10 @@ const updateFollowup = async (req, res) => {
            lead_id = $3,
            assigned_to = $4, 
            followup_date = $5, 
-           followup_type = $6, 
-           status = $7, 
+           followup_type = $6::VARCHAR, 
+           status = $7::VARCHAR, 
            notes = $8,
-           completed_at = CASE WHEN $7 = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END
+           completed_at = CASE WHEN $7::VARCHAR = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END
        WHERE id = $9
        RETURNING *`,
       [customer_id || null, opportunity_id || null, lead_id || null, assigned_to, followup_date, followup_type, status, notes, id]
