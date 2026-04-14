@@ -592,9 +592,7 @@ const buildCleanHistory = (messages) => {
 
 // ─── SHARED AGENTIC LOOP (reused by portal + WhatsApp) ──────────────────────
 
-const runAgenticLoop = async (systemPrompt, historyMessages, userText, userId) => {
-  const messages = [
-    { role: 'system', content: systemPrompt },, adminWhatsappPhone = null) => {
+const runAgenticLoop = async (systemPrompt, historyMessages, userText, userId, adminWhatsappPhone = null) => {
   const messages = [
     { role: 'system', content: systemPrompt },
     ...historyMessages.slice(-12),
@@ -623,7 +621,9 @@ const runAgenticLoop = async (systemPrompt, historyMessages, userText, userId) =
 
     for (const toolCall of choice.message.tool_calls) {
       const args = JSON.parse(toolCall.function.arguments);
-      const result = await executeTool(toolCall.function.name, args, userId, adminWhatsappPhone
+      const result = await executeTool(toolCall.function.name, args, userId, adminWhatsappPhone);
+      messages.push({ role: 'tool', tool_call_id: toolCall.id, content: result });
+    }
   }
 
   return { response: 'Thoda aur detail mein batao — kya karna hai?', cleanHistory: [] };
