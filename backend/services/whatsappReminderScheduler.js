@@ -10,13 +10,23 @@ const { sendWhatsAppMessage } = require('../utils/whatsappSender');
 // Default WhatsApp number (business chatbot number)
 const DEFAULT_WHATSAPP_NUMBER = process.env.DEFAULT_ADMIN_WHATSAPP || '15551646700'; // +1 (555) 164-6700
 
-// WhatsApp API credentials
-const PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID;
-const ACCESS_TOKEN = process.env.WA_ACCESS_TOKEN;
+// Fetch WhatsApp credentials from database
+const getWhatsAppCredentials = async () => {
+  const result = await pool.query(
+    'SELECT phone_number_id, access_token FROM whatsapp_config WHERE is_active = true LIMIT 1'
+  );
+  if (result.rows.length === 0) {
+    throw new Error('WhatsApp not configured');
+  }
+  return result.rows[0];
+};
 
 const processWhatsAppReminders = async () => {
   try {
     console.log('[WhatsApp Scheduler] Checking for pending reminders...');
+    
+    // Get WhatsApp credentials from database
+    const credentials = await getWhatsAppCredentials();
     
     // Get pending WhatsApp reminders - don't filter by admin_whatsapp_phone
     // We'll use fallback for reminders without it
@@ -49,7 +59,7 @@ const processWhatsAppReminders = async () => {
     
     console.log(`[WhatsApp Scheduler] Found ${result.rows.length} pending reminders`);
     
-    for (const reminder of result.rows) {
+    for (const reminder of result.credentials.phone_number_id, credentials.access_token
       try {
         // Build reminder message
         const message = buildReminderMessage(reminder);
