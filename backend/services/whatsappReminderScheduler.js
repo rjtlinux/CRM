@@ -55,7 +55,7 @@ const processWhatsAppReminders = async () => {
         const message = buildReminderMessage(reminder);
         
         // Use admin WhatsApp phone if set, otherwise use default business number
-        const targetPhone = remindPHONE_NUMBER_ID, ACCESS_TOKEN, er.admin_whatsapp_phone || DEFAULT_WHATSAPP_NUMBER;
+        const targetPhone = reminder.admin_whatsapp_phone || DEFAULT_WHATSAPP_NUMBER;
         const phoneSource = reminder.admin_whatsapp_phone ? 'admin phone' : 'default business number';
         
         // Send WhatsApp message to ADMIN (not customer)
