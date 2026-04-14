@@ -4,34 +4,45 @@ const { sendWhatsAppMessage } = require('../utils/whatsappSender');
 /**
  * WhatsApp Reminder Scheduler Service
  * Checks for pending WhatsApp reminders and sends them when due
+ * Falls back to business WhatsApp number if admin phone not set
  */
+
+// Default WhatsApp number (business chatbot number)
+const DEFAULT_WHATSAPP_NUMBER = process.env.DEFAULT_ADMIN_WHATSAPP || '15551646700'; // +1 (555) 164-6700
 
 const processWhatsAppReminders = async () => {
   try {
     console.log('[WhatsApp Scheduler] Checking for pending reminders...');
     
-    // Get pending WhatsApp reminders from view
+    // Get pending WhatsApp reminders - don't filter by admin_whatsapp_phone
+    // We'll use fallback for reminders without it
     const result = await pool.query(`
-      SELECT * FROM pending_whatsapp_reminders
-      LIMIT 50
-    `);
-    
-    if (result.rows.length === 0) {
-      console.log('[WhatsApp Scheduler] No pending reminders');
-      return;
-    }
-    
-    console.log(`[WhatsApp Scheduler] Found ${result.rows.length} pending reminders`);
-    
-    for (const reminder of result.rows) {
-      try {
-        // Build reminder message
-        const message = buildReminderMessage(reminder);
+      SELECT f.id, f.customer_id, f.opportunity_id, f.lead_id,
+             f.assigned_to, f.followup_date, f.followup_type,
+             f.notes, f.admin_whatsapp_phone,
+             c.company_name as customer_name,
+             o.title as opportunity_title,
+             l.name as lead_name,
+             u.full_name as assigned_to_name
+      FROM followups f
+      LEFT JOIN customers c ON f.customer_id = c.id
+      LEFT JOIN opportunities o ON f.opportunity_id = o.id
+      LEFT JOIN leads l ON f.lead_id = l.id
+      LEFT Use admin WhatsApp phone if set, otherwise use default business number
+        const targetPhone = reminder.admin_whatsapp_phone || DEFAULT_WHATSAPP_NUMBER;
+        const phoneSource = reminder.admin_whatsapp_phone ? 'admin phone' : 'default business number';
         
         // Send WhatsApp message to ADMIN (not customer)
-        if (reminder.target_phone) {
-          await sendWhatsAppMessage(reminder.target_phone, message);
-          console.log(`[WhatsApp Scheduler] Sent reminder to admin at ${reminder.target_phone}`);
+        await sendWhatsAppMessage(targetPhone, message);
+        console.log(`[WhatsApp Scheduler] Sent reminder to ${phoneSource}: ${targetPhone}`);
+        
+        // Mark as sent
+        await pool.query(
+          `UPDATE followups 
+           SET reminder_sent = TRUE
+           WHERE id = $1`,
+          [reminder.id]
+        ); console.log(`[WhatsApp Scheduler] Sent reminder to admin at ${reminder.target_phone}`);
           
           // Mark as sent
           await pool.query(
