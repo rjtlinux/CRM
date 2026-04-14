@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { sendWhatsAppMessage, markAsRead } = require('../utils/whatsappSender');
 const { runAgenticLoop, VOICE_SYSTEM_PROMPT, buildCleanHistory } = require('./aiController');
 
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'buzeye_whatsapp_verify_2026';
+const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'buzeye_whatsapp_verify_2026';
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
 
