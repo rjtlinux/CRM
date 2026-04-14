@@ -283,9 +283,9 @@ const Followups = () => {
                       <td className="py-3 px-4">{followup.assigned_to_name}</td>
                       <td className="py-3 px-4">
                         <div>
-                          <div>{new Date(followup.followup_date).toLocaleDateString()}</div>
+                          <div>{new Date(followup.followup_date + 'Z').toLocaleDateString()}</div>
                           <div className="text-xs text-gray-500">
-                            {new Date(followup.followup_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(followup.followup_date + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
                       </td>
