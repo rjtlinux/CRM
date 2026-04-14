@@ -3,8 +3,17 @@ const { sendWhatsAppMessage, markAsRead } = require('../utils/whatsappSender');
 const { runAgenticLoop, VOICE_SYSTEM_PROMPT, buildCleanHistory } = require('./aiController');
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'buzeye_whatsapp_verify_2026';
-const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
-const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
+
+// Fetch WhatsApp credentials from database
+const getWhatsAppConfig = async () => {
+  const result = await pool.query(
+    'SELECT phone_number_id, access_token FROM whatsapp_config WHERE is_active = true LIMIT 1'
+  );
+  if (result.rows.length === 0) {
+    throw new Error('WhatsApp not configured');
+  }
+  return result.rows[0];
+};
 
 // ─── WEBHOOK VERIFICATION (GET) ──────────────────────────────────────────────
 
@@ -77,6 +86,10 @@ const handleIncomingMessage = async (req, res) => {
   res.sendStatus(200);
 
   try {
+    // Get WhatsApp credentials from database
+    const config = await getWhatsAppConfig();
+    const { phone_number_id: PHONE_NUMBER_ID, access_token: ACCESS_TOKEN } = config;
+    
     const body = req.body;
     if (body.object !== 'whatsapp_business_account') return;
 
