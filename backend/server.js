@@ -154,6 +154,19 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Initialize WhatsApp reminder scheduler
+// Run every 5 minutes to check for pending reminders
+const { processWhatsAppReminders } = require('./services/whatsappReminderScheduler');
+
+cron.schedule('*/5 * * * *', () => {
+  console.log('[Cron] Running WhatsApp reminder check...');
+  processWhatsAppReminders().catch(err => {
+    console.error('[Cron] Error in WhatsApp reminder scheduler:', err);
+  });
+});
+
+console.log('[Scheduler] WhatsApp reminder cron job initialized (runs every 5 minutes)');
+
 // Start server
 app.listen(PORT, () => {
   console.log('========================================');
