@@ -123,7 +123,7 @@ services:
       MASTER_DB_PORT: 5432
       MASTER_DB_NAME: crm_master
       MASTER_DB_USER: crm_user
-      MASTER_DB_PASSWORD: ${MASTER_DB_PASSWORD:-CRMSecure2026}
+      MASTER_DB_PASSWORD: ${MASTER_DB_PASSWORD:-crm_password}
     volumes:
       - ${TENANTS_DIR}/registry.json:/app/tenants-registry/registry.json:ro
     ports:
@@ -133,6 +133,7 @@ services:
         condition: service_healthy
     networks:
       - ${SLUG}_network
+      - crm_buzeye_network
     command: node server.js
 
   frontend:
@@ -157,6 +158,8 @@ volumes:
 networks:
   ${SLUG}_network:
     driver: bridge
+  crm_buzeye_network:
+    external: true
 EOF
 
 # Create .env for tenant
