@@ -104,14 +104,24 @@ const createOpportunity = async (req, res) => {
 const updateOpportunity = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      customer_id, title, description, value, pipeline_stage,
-      closing_probability, expected_close_date, assigned_to
-    } = req.body;
+    const body = req.body;
     
-    // Get old stage for tracking
-    const oldData = await pool.query('SELECT pipeline_stage FROM opportunities WHERE id = $1', [id]);
-    const oldStage = oldData.rows[0]?.pipeline_stage;
+    // Get existing opportunity
+    const oldData = await pool.query('SELECT * FROM opportunities WHERE id = $1', [id]);
+    if (oldData.rows.length === 0) {
+      return res.status(404).json({ error: 'Opportunity not found' });
+    }
+    const existing = oldData.rows[0];
+    
+    // Merge: use provided values or keep existing
+    const customer_id = body.customer_id ?? existing.customer_id;
+    const title = body.title ?? existing.title;
+    const description = body.description ?? existing.description;
+    const value = body.value ?? existing.value;
+    const pipeline_stage = body.pipeline_stage ?? existing.pipeline_stage;
+    const closing_probability = body.closing_probability ?? existing.closing_probability;
+    const expected_close_date = body.expected_close_date ?? existing.expected_close_date;
+    const assigned_to = body.assigned_to ?? existing.assigned_to;
     
     const result = await pool.query(
       `UPDATE opportunities 
@@ -124,23 +134,19 @@ const updateOpportunity = async (req, res) => {
        expected_close_date, assigned_to, id]
     );
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Opportunity not found' });
-    }
-    
     // Track stage change
-    if (oldStage && oldStage !== pipeline_stage) {
+    if (existing.pipeline_stage && existing.pipeline_stage !== pipeline_stage) {
       await pool.query(
         `INSERT INTO conversion_tracking 
          (opportunity_id, stage_from, stage_to, created_by)
          VALUES ($1, $2, $3, $4)`,
-        [id, oldStage, pipeline_stage, req.user.id]
+        [id, existing.pipeline_stage, pipeline_stage, req.user.id]
       );
       
       await pool.query(
         `INSERT INTO activity_log (user_id, entity_type, entity_id, action, description)
          VALUES ($1, 'opportunity', $2, 'stage_changed', $3)`,
-        [req.user.id, id, `Stage changed from ${oldStage} to ${pipeline_stage}`]
+        [req.user.id, id, `Stage changed from ${existing.pipeline_stage} to ${pipeline_stage}`]
       );
     }
     

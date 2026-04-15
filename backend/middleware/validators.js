@@ -186,6 +186,28 @@ const opportunityValidationRules = () => [
     .withMessage('Closing probability must be between 0 and 100'),
 ];
 
+const opportunityUpdateRules = () => [
+  body('customer_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Valid customer ID is required'),
+  body('title')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Title is required')
+    .isLength({ max: 255 })
+    .withMessage('Title must not exceed 255 characters'),
+  body('value')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Value must be a non-negative number'),
+  body('closing_probability')
+    .optional({ nullable: true })
+    .isInt({ min: 0, max: 100 })
+    .withMessage('Closing probability must be between 0 and 100'),
+];
+
 /**
  * Validation rules for user registration
  */
@@ -233,6 +255,7 @@ module.exports = {
   costValidationRules,
   proposalValidationRules,
   opportunityValidationRules,
+  opportunityUpdateRules,
   registerValidationRules,
   loginValidationRules,
 };
