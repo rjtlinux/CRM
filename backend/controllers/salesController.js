@@ -58,6 +58,57 @@ const createSale = async (req, res) => {
       return res.status(400).json({ error: 'Selected customer does not exist. Please refresh and try again.' });
     }
     
+    // If this is NOT an udhar sale, check if customer has outstanding credit and apply payment
+    if (payment_method !== 'udhar' && status === 'completed') {
+      const pending = await pool.query(
+        `SELECT id, amount FROM sales 
+         WHERE customer_id = $1 AND payment_method = 'udhar' AND status = 'pending'
+         ORDER BY sale_date ASC LIMIT 1`,
+        [customer_id]
+      );
+      
+      if (pending.rows.length > 0) {
+        const pendingSale = pending.rows[0];
+        const paymentAmount = parseFloat(amount);
+        const outstandingAmount = parseFloat(pendingSale.amount);
+        
+        if (paymentAmount >= outstandingAmount) {
+          // Payment covers the entire outstanding amount
+          await pool.query(`UPDATE sales SET status = 'completed' WHERE id = $1`, [pendingSale.id]);
+          
+          // If there's excess, create a new regular sale for the remainder
+          if (paymentAmount > outstandingAmount) {
+            const excessAmount = paymentAmount - outstandingAmount;
+            await pool.query(
+              `INSERT INTO sales (customer_id, sale_date, amount, description, status, payment_method, invoice_number, created_by)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+               RETURNING *`,
+              [customer_id, sale_date, excessAmount, description || 'Excess payment after credit settlement', 'completed', payment_method, invoice_number, req.user.id]
+            );
+          }
+          
+          return res.status(201).json({ 
+            message: `Payment recorded. Outstanding credit of ₹${outstandingAmount} cleared.`,
+            creditCleared: outstandingAmount,
+            excessAmount: paymentAmount - outstandingAmount
+          });
+        } else {
+          // Partial payment - reduce outstanding amount
+          await pool.query(
+            `UPDATE sales SET amount = amount - $1 WHERE id = $2`,
+            [paymentAmount, pendingSale.id]
+          );
+          
+          return res.status(201).json({ 
+            message: `Partial payment of ₹${paymentAmount} recorded against outstanding credit.`,
+            paidAmount: paymentAmount,
+            remainingCredit: outstandingAmount - paymentAmount
+          });
+        }
+      }
+    }
+    
+    // Regular sale creation (no outstanding credit involved)
     const result = await pool.query(
       `INSERT INTO sales (customer_id, sale_date, amount, description, status, payment_method, invoice_number, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
