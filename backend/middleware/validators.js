@@ -115,9 +115,8 @@ const salesValidationRules = () => [
     .isFloat({ min: 0.01 })
     .withMessage('Amount must be a positive number'),
   body('description')
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage('Description is required')
     .isLength({ max: 1000 })
     .withMessage('Description must not exceed 1000 characters'),
   body('sale_date')
