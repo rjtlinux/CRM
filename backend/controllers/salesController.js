@@ -41,20 +41,26 @@ const createSale = async (req, res) => {
   try {
     const { customer_id, sale_date, amount, description, status, payment_method, invoice_number } = req.body;
     
+    console.log('[Sales] Create request:', { customer_id, sale_date, amount, status, payment_method });
+    
     // Validation
-    if (!customer_id) {
+    if (!customer_id || customer_id === '' || customer_id === 'undefined') {
+      console.log('[Sales] Validation failed: Customer is required');
       return res.status(400).json({ error: 'Customer is required' });
     }
     if (!sale_date) {
+      console.log('[Sales] Validation failed: Sale date is required');
       return res.status(400).json({ error: 'Sale date is required' });
     }
     if (!amount || parseFloat(amount) <= 0) {
+      console.log('[Sales] Validation failed: Valid amount is required');
       return res.status(400).json({ error: 'Valid amount is required' });
     }
     
     // Verify customer exists
     const customerCheck = await pool.query('SELECT id FROM customers WHERE id = $1', [customer_id]);
     if (customerCheck.rows.length === 0) {
+      console.log('[Sales] Validation failed: Customer not found');
       return res.status(400).json({ error: 'Customer not found' });
     }
     
@@ -64,6 +70,8 @@ const createSale = async (req, res) => {
        RETURNING *`,
       [customer_id, sale_date, amount, description || '', status || 'completed', payment_method || 'cash', invoice_number || null, req.user.id]
     );
+    
+    console.log('[Sales] Created successfully:', result.rows[0].id);
     
     res.status(201).json({ 
       message: 'Sale created successfully',
