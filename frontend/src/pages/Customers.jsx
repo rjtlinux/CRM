@@ -313,10 +313,7 @@ const Customers = () => {
               )}
             </div>
           );
-        })}))}
-            </tbody>
-          </table>
-        </div>
+        })}
       </div>
 
       {/* Modal */}
