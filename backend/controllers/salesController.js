@@ -41,37 +41,29 @@ const createSale = async (req, res) => {
   try {
     const { customer_id, sale_date, amount, description, status, payment_method, invoice_number } = req.body;
     
-    console.log('[Sales] Create request:', { customer_id, sale_date, amount, status, payment_method });
-    
-    // Validation
+    // Validation with clear error messages
     if (!customer_id || customer_id === '' || customer_id === 'undefined') {
-      console.log('[Sales] Validation failed: Customer is required');
-      return res.status(400).json({ error: 'Customer is required' });
+      return res.status(400).json({ error: 'Please select a customer from the dropdown' });
     }
     if (!sale_date) {
-      console.log('[Sales] Validation failed: Sale date is required');
-      return res.status(400).json({ error: 'Sale date is required' });
+      return res.status(400).json({ error: 'Please select a sale date' });
     }
     if (!amount || parseFloat(amount) <= 0) {
-      console.log('[Sales] Validation failed: Valid amount is required');
-      return res.status(400).json({ error: 'Valid amount is required' });
+      return res.status(400).json({ error: 'Please enter a valid amount greater than 0' });
     }
     
     // Verify customer exists
     const customerCheck = await pool.query('SELECT id FROM customers WHERE id = $1', [customer_id]);
     if (customerCheck.rows.length === 0) {
-      console.log('[Sales] Validation failed: Customer not found');
-      return res.status(400).json({ error: 'Customer not found' });
+      return res.status(400).json({ error: 'Selected customer does not exist. Please refresh and try again.' });
     }
     
     const result = await pool.query(
       `INSERT INTO sales (customer_id, sale_date, amount, description, status, payment_method, invoice_number, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [customer_id, sale_date, amount, description || '', status || 'completed', payment_method || 'cash', invoice_number || null, req.user.id]
+      [customer_id, sale_date, amount, description || null, status || 'completed', payment_method || 'cash', invoice_number || null, req.user.id]
     );
-    
-    console.log('[Sales] Created successfully:', result.rows[0].id);
     
     res.status(201).json({ 
       message: 'Sale created successfully',
@@ -81,12 +73,15 @@ const createSale = async (req, res) => {
     console.error('Create sale error:', error);
     // Provide more specific error messages
     if (error.code === '23503') {
-      return res.status(400).json({ error: 'Invalid customer selected' });
+      return res.status(400).json({ error: 'The selected customer is invalid. Please select a valid customer.' });
     }
     if (error.code === '23505') {
-      return res.status(400).json({ error: 'Duplicate invoice number' });
+      return res.status(400).json({ error: 'This invoice number already exists. Please use a unique invoice number.' });
     }
-    res.status(500).json({ error: 'Failed to create sale. Please check all fields and try again.' });
+    if (error.code === '22P02') {
+      return res.status(400).json({ error: 'Invalid data format. Please check amount and date fields.' });
+    }
+    res.status(500).json({ error: 'Unable to create sale. Please check all required fields (Customer, Date, Amount) and try again.' });
   }
 };
 
