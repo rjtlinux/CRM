@@ -150,11 +150,50 @@ const getAllCreditScores = async (req, res) => {
   }
 };
 
+// Record credit (add to customer's total_deal_amount)
+const recordCredit = async (req, res) => {
+  try {
+    const { customer_id, amount, description } = req.body;
+    
+    if (!customer_id) {
+      return res.status(400).json({ error: 'Please select a customer' });
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ error: 'Please enter a valid amount' });
+    }
+    
+    // Verify customer exists
+    const customerCheck = await pool.query('SELECT id, company_name, total_deal_amount FROM customers WHERE id = $1', [customer_id]);
+    if (customerCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Customer not found' });
+    }
+    
+    const creditAmount = parseFloat(amount);
+    
+    // Add credit to customer's total_deal_amount
+    const result = await pool.query(
+      `UPDATE customers SET total_deal_amount = total_deal_amount + $1 WHERE id = $2 RETURNING *`,
+      [creditAmount, customer_id]
+    );
+    
+    res.status(201).json({
+      message: `Credit of ₹${creditAmount} recorded for ${customerCheck.rows[0].company_name}`,
+      customer: result.rows[0],
+      credit_added: creditAmount,
+      new_total_deal_amount: parseFloat(result.rows[0].total_deal_amount)
+    });
+  } catch (error) {
+    console.error('Record credit error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   getCustomerOutstanding,
   getPartyLedger,
   getTopDefaulters,
   getPaymentCollectionTrend,
   getCustomerCreditScore,
-  getAllCreditScores
+  getAllCreditScores,
+  recordCredit
 };

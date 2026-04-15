@@ -148,14 +148,24 @@ const UdharKhata = () => {
       alert(t('pleaseSelectCustomer'));
       return;
     }
+    if (!saleForm.amount || parseFloat(saleForm.amount) <= 0) {
+      alert(t('pleaseEnterAmount') || 'Please enter a valid amount');
+      return;
+    }
     setSaving(true);
     try {
-      await salesAPI.create({ ...saleForm, status: 'pending' });
+      // Record credit = increase customer's total_deal_amount (NOT a sale)
+      await axios.post('/udhar-khata/record-credit', {
+        customer_id: saleForm.customer_id,
+        amount: saleForm.amount,
+        description: saleForm.description
+      });
       setShowModal(false);
       fetchUdharData();
+      fetchAllCustomers();
     } catch (error) {
-      console.error('Error recording udhar:', error);
-      alert(t('udharRecordError'));
+      console.error('Error recording credit:', error);
+      alert(error.response?.data?.error || t('udharRecordError'));
     } finally {
       setSaving(false);
     }

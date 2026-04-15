@@ -6,7 +6,8 @@ const {
   getTopDefaulters,
   getPaymentCollectionTrend,
   getCustomerCreditScore,
-  getAllCreditScores
+  getAllCreditScores,
+  recordCredit
 } = require('../controllers/udharKhataController');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -30,5 +31,8 @@ router.get('/credit-score/:customerId', getCustomerCreditScore);
 
 // Get all customer credit scores
 router.get('/credit-scores', getAllCreditScores);
+
+// Record credit (add to customer's total_deal_amount)
+router.post('/record-credit', recordCredit);
 
 module.exports = router;

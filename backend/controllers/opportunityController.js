@@ -76,6 +76,14 @@ const createOpportunity = async (req, res) => {
        expected_close_date, assigned_to, source, req.user.id]
     );
     
+    // Sync deal value to customer's total_deal_amount (add to existing)
+    if (value && parseFloat(value) > 0) {
+      await pool.query(
+        `UPDATE customers SET total_deal_amount = total_deal_amount + $1 WHERE id = $2`,
+        [parseFloat(value), customer_id]
+      );
+    }
+    
     // Log activity
     await pool.query(
       `INSERT INTO activity_log (user_id, entity_type, entity_id, action, description)
