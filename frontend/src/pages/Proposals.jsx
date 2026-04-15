@@ -114,7 +114,65 @@ const Proposals = () => {
       alert(t('failedToDeleteProposal'));
     }
   };
+  const handlePrintProposal = (proposal) => {
+    const printWindow = window.open('', '_blank');
+    const currentDate = new Date().toLocaleDateString('en-IN');
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Proposal - ${proposal.proposal_number}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+          .header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid #1a73e8; padding-bottom: 20px; }
+          .header h1 { color: #1a73e8; margin: 0; }
+          .section { margin: 30px 0; }
+          .section-title { font-size: 18px; font-weight: bold; color: #1a73e8; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+          .info-row { margin: 8px 0; }
+          .label { font-weight: bold; display: inline-block; width: 150px; }
+          .total { font-size: 24px; color: #1a73e8; font-weight: bold; text-align: right; margin-top: 30px; padding: 15px; background: #f0f7ff; border-radius: 5px; }
+          .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 12px; }
+          @media print {
+            body { margin: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>BUSINESS PROPOSAL</h1>
+          <p style="margin: 5px 0;">Proposal No: <strong>${proposal.proposal_number}</strong></p>
+          <p style="margin: 5px 0;">Date: ${currentDate}</p>
+        </div>
 
+        <div class="section">
+          <div class="section-title">Customer Information</div>
+          <div class="info-row"><span class="label">Company:</span> ${proposal.customer_name || 'N/A'}</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Proposal Details</div>
+          <div class="info-row"><span class="label">Title:</span> ${proposal.title}</div>
+          <div class="info-row"><span class="label">Description:</span> ${proposal.description || 'N/A'}</div>
+          <div class="info-row"><span class="label">Valid Until:</span> ${proposal.valid_until ? new Date(proposal.valid_until).toLocaleDateString('en-IN') : 'N/A'}</div>
+          <div class="info-row"><span class="label">Status:</span> <span style="text-transform: uppercase; color: #1a73e8;">${proposal.status}</span></div>
+        </div>
+
+        <div class="total">
+          Total Amount: ₹${parseFloat(proposal.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+
+        <div class="footer">
+          <p><strong>Note:</strong> This document can be customized with your company details via Admin Settings.</p>
+          <p style="margin-top: 20px;">Generated on ${currentDate}</p>
+          <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">🖨️ Print This Proposal</button>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
   const openModal = (proposal = null) => {
     if (proposal) {
       setEditingProposal(proposal);
@@ -295,6 +353,13 @@ const Proposals = () => {
                     </span>
                   </td>
                   <td className="py-3 px-4">
+                    <button
+                      onClick={() => handlePrintProposal(proposal)}
+                      className="text-green-600 hover:text-green-800 mr-3"
+                      title={t('downloadPDF') || 'Download/Print'}
+                    >
+                      📥
+                    </button>
                     <button
                       onClick={() => openModal(proposal)}
                       className="text-blue-600 hover:text-blue-800 mr-3"
