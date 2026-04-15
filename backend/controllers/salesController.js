@@ -102,14 +102,22 @@ const createSale = async (req, res) => {
             creditCleared: outstandingAmount
           });
         } else {
-          // Partial payment - reduce outstanding amount
+          // Partial payment - split into paid and remaining portions
+          // Create a completed entry for the paid amount
           await pool.query(
-            `UPDATE sales SET amount = amount - $1, description = COALESCE(description, '') || ' (Partial payment ₹' || $1 || ' via ' || $2 || ')' WHERE id = $3`,
-            [paymentAmount, payment_method, pendingSale.id]
+            `INSERT INTO sales (customer_id, sale_date, amount, description, status, payment_method, invoice_number, created_by)
+             VALUES ($1, $2, $3, $4, 'completed', 'udhar', $5, $6)`,
+            [customer_id, sale_date, paymentAmount, `Payment received via ${payment_method}`, invoice_number, req.user.id]
+          );
+          
+          // Reduce the original udhar by the paid amount
+          await pool.query(
+            `UPDATE sales SET amount = amount - $1 WHERE id = $2`,
+            [paymentAmount, pendingSale.id]
           );
           
           return res.status(201).json({ 
-            message: `Partial payment of ₹${paymentAmount} recorded against outstanding credit.`,
+            message: `Partial payment of ₹${paymentAmount} recorded. Remaining credit: ₹${outstandingAmount - paymentAmount}.`,
             paidAmount: paymentAmount,
             remainingCredit: outstandingAmount - paymentAmount
           });
