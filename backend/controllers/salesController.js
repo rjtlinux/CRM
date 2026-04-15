@@ -57,9 +57,67 @@ const createSale = async (req, res) => {
       return res.status(400).json({ error: 'Selected customer does not exist. Please refresh and try again.' });
     }
     
-    // Create the sale entry first (always create the transaction record)
-    // For cash/bank/UPI/card sales, default status is 'completed' (payment received)
-    // For udhar sales, status is 'pending' (payment not yet received)
+    // If this is NOT an udhar sale AND payment is completed, check if customer has outstanding credit
+    // If yes, treat this as a PAYMENT against credit, not a new sale
+    if (payment_method !== 'udhar' && (status === 'completed' || !status)) {
+      const pending = await pool.query(
+        `SELECT id, amount FROM sales 
+         WHERE customer_id = $1 AND payment_method = 'udhar' AND status = 'pending'
+         ORDER BY sale_date ASC LIMIT 1`,
+        [customer_id]
+      );
+      
+      if (pending.rows.length > 0) {
+        // Customer has outstanding - this is a PAYMENT, not a sale
+        const pendingSale = pending.rows[0];
+        const paymentAmount = parseFloat(amount);
+        const outstandingAmount = parseFloat(pendingSale.amount);
+        
+        if (paymentAmount >= outstandingAmount) {
+          // Full payment - mark udhar as completed
+          await pool.query(
+            `UPDATE sales SET status = 'completed', description = COALESCE(description, '') || ' (Paid via ' || $1 || ')' WHERE id = $2`,
+            [payment_method, pendingSale.id]
+          );
+          
+          // If excess payment, create a new sale for the excess amount
+          if (paymentAmount > outstandingAmount) {
+            const excessAmount = paymentAmount - outstandingAmount;
+            const excessResult = await pool.query(
+              `INSERT INTO sales (customer_id, sale_date, amount, description, status, payment_method, invoice_number, created_by)
+               VALUES ($1, $2, $3, $4, 'completed', $5, $6, $7)
+               RETURNING *`,
+              [customer_id, sale_date, excessAmount, description || `New sale (Excess after clearing ₹${outstandingAmount} credit)`, payment_method, invoice_number, req.user.id]
+            );
+            
+            return res.status(201).json({ 
+              message: `Payment recorded. Outstanding credit of ₹${outstandingAmount} cleared. New sale of ₹${excessAmount} created.`,
+              creditCleared: outstandingAmount,
+              newSale: excessResult.rows[0]
+            });
+          }
+          
+          return res.status(201).json({ 
+            message: `Payment of ₹${paymentAmount} recorded. Outstanding credit cleared.`,
+            creditCleared: outstandingAmount
+          });
+        } else {
+          // Partial payment - reduce outstanding amount
+          await pool.query(
+            `UPDATE sales SET amount = amount - $1, description = COALESCE(description, '') || ' (Partial payment ₹' || $1 || ' via ' || $2 || ')' WHERE id = $3`,
+            [paymentAmount, payment_method, pendingSale.id]
+          );
+          
+          return res.status(201).json({ 
+            message: `Partial payment of ₹${paymentAmount} recorded against outstanding credit.`,
+            paidAmount: paymentAmount,
+            remainingCredit: outstandingAmount - paymentAmount
+          });
+        }
+      }
+    }
+    
+    // No outstanding OR this is an udhar sale - create normal sale entry
     const finalStatus = payment_method === 'udhar' ? 'pending' : 'completed';
     const actualStatus = status || finalStatus;
     
@@ -70,41 +128,9 @@ const createSale = async (req, res) => {
       [customer_id, sale_date, amount, description || null, actualStatus, payment_method || 'cash', invoice_number || null, req.user.id]
     );
     
-    const createdSale = result.rows[0];
-    let responseMessage = 'Sale created successfully';
-    
-    // If this is NOT an udhar sale AND payment is completed, check if customer has outstanding credit and apply payment
-    if (payment_method !== 'udhar' && createdSale.status === 'completed') {
-      const pending = await pool.query(
-        `SELECT id, amount FROM sales 
-         WHERE customer_id = $1 AND payment_method = 'udhar' AND status = 'pending'
-         ORDER BY sale_date ASC LIMIT 1`,
-        [customer_id]
-      );
-      
-      if (pending.rows.length > 0) {
-        const pendingSale = pending.rows[0];
-        const paymentAmount = parseFloat(amount);
-        const outstandingAmount = parseFloat(pendingSale.amount);
-        
-        if (paymentAmount >= outstandingAmount) {
-          // Payment covers the entire outstanding amount
-          await pool.query(`UPDATE sales SET status = 'completed' WHERE id = $1`, [pendingSale.id]);
-          responseMessage = `Sale created and outstanding credit of ₹${outstandingAmount} cleared.`;
-        } else {
-          // Partial payment - reduce outstanding amount
-          await pool.query(
-            `UPDATE sales SET amount = amount - $1 WHERE id = $2`,
-            [paymentAmount, pendingSale.id]
-          );
-          responseMessage = `Sale created. Partial payment of ₹${paymentAmount} applied to outstanding credit.`;
-        }
-      }
-    }
-    
     res.status(201).json({ 
-      message: responseMessage,
-      sale: createdSale
+      message: 'Sale created successfully',
+      sale: result.rows[0]
     });
   } catch (error) {
     console.error('Create sale error:', error);
