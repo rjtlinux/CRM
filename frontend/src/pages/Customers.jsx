@@ -151,6 +151,9 @@ const Customers = () => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
+    });
+  };
+
   const toggleExpanded = (customerId) => {
     setExpandedCustomer(expandedCustomer === customerId ? null : customerId);
   };
