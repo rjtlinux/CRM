@@ -1,6 +1,9 @@
 -- Create views for Udhar Khata (Credit Book)
+-- Credit = total_deal_amount on customer table
+-- Received = SUM of all completed sales
+-- Outstanding = total_deal_amount - received
 
--- 1. Customer outstanding balance view (only shows credit/udhar entries)
+-- 1. Customer outstanding balance view
 CREATE OR REPLACE VIEW customer_outstanding AS
 SELECT 
   c.id as customer_id,
@@ -8,19 +11,19 @@ SELECT
   c.contact_person,
   c.phone,
   c.email,
-  COALESCE(SUM(s.amount), 0) as total_sales,
+  c.total_deal_amount,
   COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount ELSE 0 END), 0) as paid_amount,
-  COALESCE(SUM(CASE WHEN s.status = 'pending' THEN s.amount ELSE 0 END), 0) as outstanding_amount,
-  COUNT(CASE WHEN s.status = 'pending' THEN 1 END) as pending_invoices,
-  MAX(CASE WHEN s.status = 'completed' THEN s.sale_date END) as last_payment_date,
-  CURRENT_DATE - MAX(CASE WHEN s.status = 'completed' THEN s.sale_date END) as days_since_last_payment
+  c.total_deal_amount - COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount ELSE 0 END), 0) as outstanding_amount,
+  COUNT(s.id) as total_transactions,
+  MAX(s.sale_date) as last_payment_date,
+  CURRENT_DATE - MAX(s.sale_date) as days_since_last_payment
 FROM customers c
-LEFT JOIN sales s ON c.id = s.customer_id AND s.payment_method = 'udhar'
-GROUP BY c.id, c.company_name, c.contact_person, c.phone, c.email
-HAVING COALESCE(SUM(CASE WHEN s.status = 'pending' THEN s.amount ELSE 0 END), 0) > 0
+LEFT JOIN sales s ON c.id = s.customer_id
+GROUP BY c.id, c.company_name, c.contact_person, c.phone, c.email, c.total_deal_amount
+HAVING c.total_deal_amount - COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount ELSE 0 END), 0) > 0
 ORDER BY outstanding_amount DESC;
 
--- 2. Party-wise ledger view (complete transaction history - only udhar entries)
+-- 2. Party-wise ledger view (complete transaction history)
 CREATE OR REPLACE VIEW party_ledger AS
 SELECT 
   c.id as customer_id,
@@ -31,47 +34,40 @@ SELECT
   s.description,
   s.amount,
   s.status as payment_status,
+  s.payment_method,
   s.invoice_number,
-  CASE 
-    WHEN s.status = 'completed' THEN s.amount
-    ELSE 0
-  END as credit,
-  CASE 
-    WHEN s.status = 'pending' THEN s.amount
-    ELSE 0
-  END as debit,
-  SUM(CASE 
-    WHEN s.status = 'pending' THEN s.amount
-    ELSE -s.amount
-  END) OVER (
+  s.amount as credit,
+  0 as debit,
+  c.total_deal_amount - SUM(s.amount) OVER (
     PARTITION BY c.id 
     ORDER BY s.sale_date, s.id
   ) as running_balance
 FROM customers c
-LEFT JOIN sales s ON c.id = s.customer_id AND s.payment_method = 'udhar'
+JOIN sales s ON c.id = s.customer_id AND s.status = 'completed'
 ORDER BY c.id, s.sale_date DESC, s.id DESC;
 
--- 3. Top defaulters view (customers with highest overdue amounts - only udhar entries)
+-- 3. Top defaulters view (customers with highest outstanding amounts)
 CREATE OR REPLACE VIEW top_defaulters AS
 SELECT 
   c.id as customer_id,
   c.company_name,
   c.contact_person,
   c.phone,
-  COALESCE(SUM(s.amount), 0) as overdue_amount,
-  COUNT(s.id) as overdue_invoices,
-  MIN(s.sale_date) as oldest_invoice_date,
-  CURRENT_DATE - MIN(s.sale_date) as days_overdue,
+  c.total_deal_amount - COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount END), 0) as overdue_amount,
+  c.total_deal_amount,
+  COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount END), 0) as paid_amount,
+  c.created_at::date as customer_since,
+  CURRENT_DATE - c.created_at::date as days_overdue,
   CASE 
-    WHEN CURRENT_DATE - MIN(s.sale_date) > 90 THEN 'Critical'
-    WHEN CURRENT_DATE - MIN(s.sale_date) > 60 THEN 'High'
-    WHEN CURRENT_DATE - MIN(s.sale_date) > 30 THEN 'Medium'
+    WHEN CURRENT_DATE - c.created_at::date > 90 THEN 'Critical'
+    WHEN CURRENT_DATE - c.created_at::date > 60 THEN 'High'
+    WHEN CURRENT_DATE - c.created_at::date > 30 THEN 'Medium'
     ELSE 'Low'
   END as risk_level
 FROM customers c
-LEFT JOIN sales s ON c.id = s.customer_id AND s.status = 'pending' AND s.payment_method = 'udhar'
-GROUP BY c.id, c.company_name, c.contact_person, c.phone
-HAVING COALESCE(SUM(s.amount), 0) > 0
+LEFT JOIN sales s ON c.id = s.customer_id
+GROUP BY c.id, c.company_name, c.contact_person, c.phone, c.total_deal_amount, c.created_at
+HAVING c.total_deal_amount - COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount END), 0) > 0
 ORDER BY overdue_amount DESC;
 
 -- 4. Payment collection trend

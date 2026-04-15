@@ -304,21 +304,6 @@ const Sales = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('status')}
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="input-field"
-                  >
-                    <option value="pending">{t('pending')}</option>
-                    <option value="completed">{t('completed')}</option>
-                    <option value="cancelled">{t('cancelled')}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('paymentMethod')}
                   </label>
                   <select
@@ -327,12 +312,13 @@ const Sales = () => {
                     onChange={handleChange}
                     className="input-field"
                   >
-                    <option value="credit_card">{t('creditCard')}</option>
-                    <option value="bank_transfer">{t('bankTransfer')}</option>
                     <option value="cash">{t('cash')}</option>
-                    <option value="invoice">{t('invoicePayment')}</option>
+                    <option value="bank_transfer">{t('bankTransfer')}</option>
+                    <option value="upi">UPI</option>
+                    <option value="credit_card">{t('creditCard')}</option>
                   </select>
                 </div>
+                <div></div>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">

@@ -2,13 +2,15 @@ const pool = require('../config/database');
 
 const getAllCustomers = async (req, res) => {
   try {
-    // Get customers with financial summary - Total Deal Amount (all sales) and Outstanding (only udhar)
+    // Total Deal Amount = fixed column on customer (never changes)
+    // Received = SUM of all completed sales for this customer
+    // Outstanding = total_deal_amount - received
     const result = await pool.query(`
       SELECT 
         c.*,
-        COALESCE(SUM(s.amount), 0) as total_deal_amount,
-        COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' AND s.status = 'completed' THEN s.amount END), 0) as total_received,
-        COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' AND s.status = 'pending' THEN s.amount END), 0) as total_outstanding
+        c.total_deal_amount,
+        COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount END), 0) as total_received,
+        c.total_deal_amount - COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.amount END), 0) as total_outstanding
       FROM customers c
       LEFT JOIN sales s ON c.id = s.customer_id
       GROUP BY c.id
@@ -38,7 +40,6 @@ const getCustomerById = async (req, res) => {
 };
 
 const createCustomer = async (req, res) => {
-  const client = await pool.connect();
   try {
     const { 
       company_name, 
@@ -54,11 +55,11 @@ const createCustomer = async (req, res) => {
       business_type,
       generation_mode,
       company_size,
-      opening_balance  // New field for initial credit
+      total_deal_amount
     } = req.body;
     
     // Check if company name already exists
-    const existingCustomer = await client.query(
+    const existingCustomer = await pool.query(
       'SELECT id FROM customers WHERE LOWER(company_name) = LOWER($1)',
       [company_name]
     );
@@ -69,17 +70,15 @@ const createCustomer = async (req, res) => {
       });
     }
     
-    // Start transaction
-    await client.query('BEGIN');
+    const dealAmount = parseFloat(total_deal_amount) || 0;
     
-    // Create customer
-    const result = await client.query(
+    const result = await pool.query(
       `INSERT INTO customers (
         company_name, contact_person, contact_designation, email, phone, 
         address, pincode, city, country, sector, 
-        business_type, generation_mode, company_size, created_by
+        business_type, generation_mode, company_size, total_deal_amount, created_by
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         company_name, 
@@ -95,49 +94,23 @@ const createCustomer = async (req, res) => {
         business_type || 'new',
         generation_mode || 'web_enquiry',
         company_size,
+        dealAmount,
         req.user.id
       ]
     );
     
-    const newCustomer = result.rows[0];
-    
-    // If opening balance provided and > 0, create initial credit entry
-    const openingBal = parseFloat(opening_balance) || 0;
-    if (openingBal > 0) {
-      await client.query(
-        `INSERT INTO sales (
-          customer_id, amount, description, sale_date, 
-          payment_method, status, created_by
-        )
-        VALUES ($1, $2, $3, CURRENT_DATE, 'udhar', 'pending', $4)`,
-        [
-          newCustomer.id,
-          openingBal,
-          'Opening balance / पिछला बकाया',
-          req.user.id
-        ]
-      );
-    }
-    
-    // Commit transaction
-    await client.query('COMMIT');
-    
     res.status(201).json({ 
-      message: openingBal > 0 
-        ? `Customer created with opening balance of ₹${openingBal}`
+      message: dealAmount > 0 
+        ? `Customer created with deal amount of ₹${dealAmount}`
         : 'Customer created successfully',
-      customer: newCustomer,
-      opening_balance: openingBal
+      customer: result.rows[0]
     });
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Create customer error:', error);
-    if (error.code === '23505') { // Unique constraint violation
+    if (error.code === '23505') {
       return res.status(400).json({ error: 'A customer with this company name already exists' });
     }
     res.status(500).json({ error: 'Server error' });
-  } finally {
-    client.release();
   }
 };
 
@@ -238,16 +211,10 @@ const getCustomerDetail = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [customerRes, salesRes, udharRes, opportunitiesRes, followupsRes, proposalsRes] = await Promise.all([
+    const [customerRes, salesRes, opportunitiesRes, followupsRes, proposalsRes] = await Promise.all([
       pool.query('SELECT * FROM customers WHERE id = $1', [id]),
       pool.query(
-        `SELECT * FROM sales WHERE customer_id = $1 AND (payment_method IS NULL OR payment_method != 'udhar')
-         ORDER BY sale_date DESC`,
-        [id]
-      ),
-      pool.query(
-        `SELECT * FROM sales WHERE customer_id = $1 AND payment_method = 'udhar' AND status = 'pending'
-         ORDER BY sale_date DESC`,
+        `SELECT * FROM sales WHERE customer_id = $1 ORDER BY sale_date DESC`,
         [id]
       ),
       pool.query(
@@ -273,13 +240,14 @@ const getCustomerDetail = async (req, res) => {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    const udharEntries = udharRes.rows;
-    const totalOutstanding = udharEntries.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const customer = customerRes.rows[0];
+    const totalReceived = salesRes.rows.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
+    const totalOutstanding = parseFloat(customer.total_deal_amount || 0) - totalReceived;
 
     res.json({
-      customer: customerRes.rows[0],
+      customer: customer,
       sales: salesRes.rows,
-      udhar: udharEntries,
+      total_received: totalReceived,
       total_outstanding: totalOutstanding,
       opportunities: opportunitiesRes.rows,
       followups: followupsRes.rows,
