@@ -1,7 +1,0 @@
-1. Custumer and opprotunity are confusing. When creating opprotunity why I am getting option to choose existing customer. If it is customer, it is not opprotunity anymore. It is created customer. If opprotunity reached closed won, it should become customer.
-
-2. When creating sale geeting this "Failed to save sale"
-
-3. In proposal, give user option to download pdf format purposle so that he can send it to his customer. Prefilled some information in purposal like user name, contact details, social media link, address so that user does not need to fill this all time. In Admin section, give user option to fill this all details once and pick from there everytimr when creating purposal.
-
-4. Enhanced customer page as well, do not show all info of customer in front, give user butttom to view all info, just show name, status, phone number, Total amount, recived amount, pending amount. Link Credit book and customer and fetch amount related info/status from there, so that user can see all details in one place.

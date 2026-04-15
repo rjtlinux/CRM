@@ -38,6 +38,7 @@ const getCustomerById = async (req, res) => {
 };
 
 const createCustomer = async (req, res) => {
+  const client = await pool.connect();
   try {
     const { 
       company_name, 
@@ -52,11 +53,12 @@ const createCustomer = async (req, res) => {
       sector,
       business_type,
       generation_mode,
-      company_size
+      company_size,
+      opening_balance  // New field for initial credit
     } = req.body;
     
     // Check if company name already exists
-    const existingCustomer = await pool.query(
+    const existingCustomer = await client.query(
       'SELECT id FROM customers WHERE LOWER(company_name) = LOWER($1)',
       [company_name]
     );
@@ -67,7 +69,11 @@ const createCustomer = async (req, res) => {
       });
     }
     
-    const result = await pool.query(
+    // Start transaction
+    await client.query('BEGIN');
+    
+    // Create customer
+    const result = await client.query(
       `INSERT INTO customers (
         company_name, contact_person, contact_designation, email, phone, 
         address, pincode, city, country, sector, 
@@ -93,16 +99,45 @@ const createCustomer = async (req, res) => {
       ]
     );
     
+    const newCustomer = result.rows[0];
+    
+    // If opening balance provided and > 0, create initial credit entry
+    const openingBal = parseFloat(opening_balance) || 0;
+    if (openingBal > 0) {
+      await client.query(
+        `INSERT INTO sales (
+          customer_id, amount, description, sale_date, 
+          payment_method, status, created_by
+        )
+        VALUES ($1, $2, $3, CURRENT_DATE, 'udhar', 'pending', $4)`,
+        [
+          newCustomer.id,
+          openingBal,
+          'Opening balance / पिछला बकाया',
+          req.user.id
+        ]
+      );
+    }
+    
+    // Commit transaction
+    await client.query('COMMIT');
+    
     res.status(201).json({ 
-      message: 'Customer created successfully',
-      customer: result.rows[0] 
+      message: openingBal > 0 
+        ? `Customer created with opening balance of ₹${openingBal}`
+        : 'Customer created successfully',
+      customer: newCustomer,
+      opening_balance: openingBal
     });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Create customer error:', error);
     if (error.code === '23505') { // Unique constraint violation
       return res.status(400).json({ error: 'A customer with this company name already exists' });
     }
     res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
   }
 };
 

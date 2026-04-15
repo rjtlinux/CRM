@@ -1,6 +1,6 @@
 -- Create views for Udhar Khata (Credit Book)
 
--- 1. Customer outstanding balance view
+-- 1. Customer outstanding balance view (only shows credit/udhar entries)
 CREATE OR REPLACE VIEW customer_outstanding AS
 SELECT 
   c.id as customer_id,
@@ -15,12 +15,12 @@ SELECT
   MAX(CASE WHEN s.status = 'completed' THEN s.sale_date END) as last_payment_date,
   CURRENT_DATE - MAX(CASE WHEN s.status = 'completed' THEN s.sale_date END) as days_since_last_payment
 FROM customers c
-LEFT JOIN sales s ON c.id = s.customer_id
+LEFT JOIN sales s ON c.id = s.customer_id AND s.payment_method = 'udhar'
 GROUP BY c.id, c.company_name, c.contact_person, c.phone, c.email
 HAVING COALESCE(SUM(CASE WHEN s.status = 'pending' THEN s.amount ELSE 0 END), 0) > 0
 ORDER BY outstanding_amount DESC;
 
--- 2. Party-wise ledger view (complete transaction history)
+-- 2. Party-wise ledger view (complete transaction history - only udhar entries)
 CREATE OR REPLACE VIEW party_ledger AS
 SELECT 
   c.id as customer_id,
@@ -48,10 +48,10 @@ SELECT
     ORDER BY s.sale_date, s.id
   ) as running_balance
 FROM customers c
-LEFT JOIN sales s ON c.id = s.customer_id
+LEFT JOIN sales s ON c.id = s.customer_id AND s.payment_method = 'udhar'
 ORDER BY c.id, s.sale_date DESC, s.id DESC;
 
--- 3. Top defaulters view (customers with highest overdue amounts)
+-- 3. Top defaulters view (customers with highest overdue amounts - only udhar entries)
 CREATE OR REPLACE VIEW top_defaulters AS
 SELECT 
   c.id as customer_id,
@@ -69,7 +69,7 @@ SELECT
     ELSE 'Low'
   END as risk_level
 FROM customers c
-LEFT JOIN sales s ON c.id = s.customer_id AND s.status = 'pending'
+LEFT JOIN sales s ON c.id = s.customer_id AND s.status = 'pending' AND s.payment_method = 'udhar'
 GROUP BY c.id, c.company_name, c.contact_person, c.phone
 HAVING COALESCE(SUM(s.amount), 0) > 0
 ORDER BY overdue_amount DESC;

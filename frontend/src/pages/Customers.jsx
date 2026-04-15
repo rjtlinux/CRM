@@ -31,6 +31,7 @@ const Customers = () => {
     gstin: '',
     gst_state: '',
     gst_registration_type: 'regular',
+    opening_balance: '',
   });
 
   const sectors = [
@@ -616,6 +617,33 @@ const Customers = () => {
                       <option value="unregistered">{t('unregistered')}</option>
                     </select>
                   </div>
+
+                  {/* Opening Balance - Only for new customers */}
+                  {!editingCustomer && (
+                    <div className="col-span-2 border-t border-gray-200 pt-4 mt-4">
+                      <h3 className="text-base font-semibold text-gray-900 mb-3">
+                        {t('openingBalance')} ({t('optional')})
+                      </h3>
+                      <div className="max-w-md">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          {t('initialCreditAmount')} (₹)
+                        </label>
+                        <input
+                          type="number"
+                          name="opening_balance"
+                          value={formData.opening_balance}
+                          onChange={handleChange}
+                          className="input-field"
+                          placeholder="0"
+                          min="0"
+                          step="0.01"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {t('openingBalanceHelp')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

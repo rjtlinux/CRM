@@ -24,6 +24,7 @@ const defaultCustomerForm = {
   address: '',
   city: '',
   status: 'active',
+  opening_balance: '',
 };
 
 const UdharKhata = () => {
@@ -488,6 +489,20 @@ const UdharKhata = () => {
                         onChange={e => setCustomerForm(p => ({ ...p, city: e.target.value }))}
                         placeholder="Mumbai"
                         className="input-field text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        {t('openingBalance')} (₹) - {t('optional')}
+                      </label>
+                      <input
+                        type="number"
+                        value={customerForm.opening_balance}
+                        onChange={e => setCustomerForm(p => ({ ...p, opening_balance: e.target.value }))}
+                        placeholder="0"
+                        className="input-field text-sm"
+                        min="0"
+                        step="0.01"
                       />
                     </div>
                   </div>
