@@ -192,7 +192,7 @@ const Customers = () => {
       {/* Customer Cards - Compact View */}
       <div className="space-y-3">
         {filteredCustomers.map((customer) => {
-          const totalCredit = parseFloat(customer.total_credit || 0);
+          const totalDealAmount = parseFloat(customer.total_deal_amount) || 0;
           const totalReceived = parseFloat(customer.total_received || 0);
           const totalOutstanding = parseFloat(customer.total_outstanding || 0);
           const isExpanded = expandedCustomer === customer.id;
@@ -217,10 +217,10 @@ const Customers = () => {
                     <p className="font-medium text-gray-900">{customer.phone || '-'}</p>
                   </div>
 
-                  {/* Total Credit */}
+                  {/* Total Deal Amount */}
                   <div>
-                    <p className="text-sm text-gray-600">{t('totalCredit')}</p>
-                    <p className="font-bold text-blue-600">{formatIndianCurrency(totalCredit)}</p>
+                    <p className="text-sm text-gray-600">{t('totalDealAmount')}</p>
+                    <p className="font-bold text-blue-600">{formatIndianCurrency(totalDealAmount)}</p>
                   </div>
 
                   {/* Received */}

@@ -2,11 +2,11 @@ const pool = require('../config/database');
 
 const getAllCustomers = async (req, res) => {
   try {
-    // Get customers with financial summary from udhar khata (only credit entries)
+    // Get customers with financial summary - Total Deal Amount (all sales) and Outstanding (only udhar)
     const result = await pool.query(`
       SELECT 
         c.*,
-        COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' THEN s.amount END), 0) as total_credit,
+        COALESCE(SUM(s.amount), 0) as total_deal_amount,
         COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' AND s.status = 'completed' THEN s.amount END), 0) as total_received,
         COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' AND s.status = 'pending' THEN s.amount END), 0) as total_outstanding
       FROM customers c
