@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { customersAPI } from '../services/api';
+import { formatIndianCurrency } from '../utils/indianFormatters';
 
 const Customers = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [expandedCustomer, setExpandedCustomer] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     company_name: '',
     contact_person: '',
@@ -146,8 +151,15 @@ const Customers = () => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    });
+  const toggleExpanded = (customerId) => {
+    setExpandedCustomer(expandedCustomer === customerId ? null : customerId);
   };
+
+  const filteredCustomers = customers.filter(customer =>
+    customer.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.phone?.includes(searchTerm)
+  );
 
   if (loading) {
     return <div className="text-center py-8">{t('loading')}</div>;
@@ -162,57 +174,143 @@ const Customers = () => {
         </button>
       </div>
 
+      {/* Search Bar */}
       <div className="card">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4">{t('company')}</th>
-                <th className="text-left py-3 px-4">{t('contactPerson')}</th>
-                <th className="text-left py-3 px-4">{t('email')}</th>
-                <th className="text-left py-3 px-4">{t('phone')}</th>
-                <th className="text-left py-3 px-4">{t('location')}</th>
-                <th className="text-left py-3 px-4">{t('sector')}</th>
-                <th className="text-left py-3 px-4">{t('status')}</th>
-                <th className="text-left py-3 px-4">{t('actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((customer) => (
-                <tr key={customer.id} className="border-b hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium">{customer.company_name}</td>
-                  <td className="py-3 px-4">{customer.contact_person}</td>
-                  <td className="py-3 px-4">{customer.email}</td>
-                  <td className="py-3 px-4">{customer.phone}</td>
-                  <td className="py-3 px-4">{customer.city}, {customer.country}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                      {customer.sector || t('other')}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
+        <input
+          type="text"
+          placeholder={`${t('search')} ${t('customers')}...`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="input-field w-full"
+        />
+      </div>
+
+      {/* Customer Cards - Compact View */}
+      <div className="space-y-3">
+        {filteredCustomers.map((customer) => {
+          const totalCredit = parseFloat(customer.total_credit || 0);
+          const totalReceived = parseFloat(customer.total_received || 0);
+          const totalOutstanding = parseFloat(customer.total_outstanding || 0);
+          const isExpanded = expandedCustomer === customer.id;
+
+          return (<div key={customer.id} className="card hover:shadow-lg transition-shadow">
+              {/* Compact View */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex-1 grid grid-cols-6 gap-4 items-center">
+                  {/* Name & Status */}
+                  <div className="col-span-2">
+                    <h3 className="font-bold text-gray-900">{customer.company_name}</h3>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs mt-1 ${
                       customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}>
                       {customer.status === 'active' ? t('active') : t('inactive')}
                     </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button
-                      onClick={() => openModal(customer)}
-                      className="text-blue-600 hover:text-blue-800 mr-3"
-                    >
-                      {t('edit')}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(customer.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      {t('delete')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <p className="text-sm text-gray-600">{t('phone')}</p>
+                    <p className="font-medium text-gray-900">{customer.phone || '-'}</p>
+                  </div>
+
+                  {/* Total Credit */}
+                  <div>
+                    <p className="text-sm text-gray-600">{t('totalCredit')}</p>
+                    <p className="font-bold text-blue-600">{formatIndianCurrency(totalCredit)}</p>
+                  </div>
+
+                  {/* Received */}
+                  <div>
+                    <p className="text-sm text-gray-600">{t('received')}</p>
+                    <p className="font-bold text-green-600">{formatIndianCurrency(totalReceived)}</p>
+                  </div>
+
+                  {/* Outstanding */}
+                  <div>
+                    <p className="text-sm text-gray-600">{t('outstanding')}</p>
+                    <p className={`font-bold ${totalOutstanding > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                      {formatIndianCurrency(totalOutstanding)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => toggleExpanded(customer.id)}
+                    className="btn-secondary text-sm px-3 py-1"
+                  >
+                    {isExpanded ? '▲ ' + t('hide') : '▼ ' + t('viewDetails')}
+                  </button>
+                  <button
+                    onClick={() => openModal(customer)}
+                    className="text-blue-600 hover:text-blue-800 px-2"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={() => handleDelete(customer.id)}
+                    className="text-red-600 hover:text-red-800 px-2"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+
+              {/* Expanded View */}
+              {isExpanded && (
+                <div className="border-t border-gray-200 bg-gray-50 p-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-600">{t('contactPerson')}</p>
+                      <p className="font-medium">{customer.contact_person || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('designation')}</p>
+                      <p className="font-medium">{customer.contact_designation || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('email')}</p>
+                      <p className="font-medium">{customer.email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('address')}</p>
+                      <p className="font-medium">{customer.address || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('city')}</p>
+                      <p className="font-medium">{customer.city || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('country')}</p>
+                      <p className="font-medium">{customer.country || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('sector')}</p>
+                      <span className="inline-block px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                        {customer.sector || t('other')}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('businessType')}</p>
+                      <p className="font-medium">{customer.business_type === 'new' ? t('newBusiness') : t('oldBusiness')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">{t('companySize')}</p>
+                      <p className="font-medium">{customer.company_size || '-'}</p>
+                    </div>
+                    {customer.gstin && (
+                      <div>
+                        <p className="text-xs text-gray-600">GSTIN</p>
+                        <p className="font-medium">{customer.gstin}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}))}
             </tbody>
           </table>
         </div>

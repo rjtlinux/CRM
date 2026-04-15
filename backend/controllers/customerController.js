@@ -2,9 +2,18 @@ const pool = require('../config/database');
 
 const getAllCustomers = async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM customers ORDER BY created_at DESC'
-    );
+    // Get customers with financial summary from udhar khata
+    const result = await pool.query(`
+      SELECT 
+        c.*,
+        COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' AND s.status = 'pending' THEN s.amount END), 0) as total_outstanding,
+        COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' AND s.status = 'completed' THEN s.amount END), 0) as total_received,
+        COALESCE(SUM(CASE WHEN s.payment_method = 'udhar' THEN s.amount END), 0) as total_credit
+      FROM customers c
+      LEFT JOIN sales s ON c.id = s.customer_id
+      GROUP BY c.id
+      ORDER BY c.created_at DESC
+    `);
     res.json({ customers: result.rows });
   } catch (error) {
     console.error('Get customers error:', error);

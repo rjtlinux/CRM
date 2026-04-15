@@ -41,11 +41,28 @@ const createSale = async (req, res) => {
   try {
     const { customer_id, sale_date, amount, description, status, payment_method, invoice_number } = req.body;
     
+    // Validation
+    if (!customer_id) {
+      return res.status(400).json({ error: 'Customer is required' });
+    }
+    if (!sale_date) {
+      return res.status(400).json({ error: 'Sale date is required' });
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ error: 'Valid amount is required' });
+    }
+    
+    // Verify customer exists
+    const customerCheck = await pool.query('SELECT id FROM customers WHERE id = $1', [customer_id]);
+    if (customerCheck.rows.length === 0) {
+      return res.status(400).json({ error: 'Customer not found' });
+    }
+    
     const result = await pool.query(
       `INSERT INTO sales (customer_id, sale_date, amount, description, status, payment_method, invoice_number, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [customer_id, sale_date, amount, description, status, payment_method, invoice_number, req.user.id]
+      [customer_id, sale_date, amount, description || '', status || 'completed', payment_method || 'cash', invoice_number || null, req.user.id]
     );
     
     res.status(201).json({ 
@@ -54,7 +71,14 @@ const createSale = async (req, res) => {
     });
   } catch (error) {
     console.error('Create sale error:', error);
-    res.status(500).json({ error: 'Server error' });
+    // Provide more specific error messages
+    if (error.code === '23503') {
+      return res.status(400).json({ error: 'Invalid customer selected' });
+    }
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Duplicate invoice number' });
+    }
+    res.status(500).json({ error: 'Failed to create sale. Please check all fields and try again.' });
   }
 };
 

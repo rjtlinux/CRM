@@ -52,7 +52,8 @@ const Sales = () => {
       closeModal();
     } catch (error) {
       console.error('Error saving sale:', error);
-      alert(t('failedToSaveSale'));
+      const errorMessage = error.response?.data?.error || t('failedToSaveSale');
+      alert(errorMessage);
     }
   };
 
