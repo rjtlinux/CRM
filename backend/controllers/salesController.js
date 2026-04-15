@@ -58,18 +58,23 @@ const createSale = async (req, res) => {
     }
     
     // Create the sale entry first (always create the transaction record)
+    // For cash/bank/UPI/card sales, default status is 'completed' (payment received)
+    // For udhar sales, status is 'pending' (payment not yet received)
+    const finalStatus = payment_method === 'udhar' ? 'pending' : 'completed';
+    const actualStatus = status || finalStatus;
+    
     const result = await pool.query(
       `INSERT INTO sales (customer_id, sale_date, amount, description, status, payment_method, invoice_number, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [customer_id, sale_date, amount, description || null, status || 'completed', payment_method || 'cash', invoice_number || null, req.user.id]
+      [customer_id, sale_date, amount, description || null, actualStatus, payment_method || 'cash', invoice_number || null, req.user.id]
     );
     
     const createdSale = result.rows[0];
     let responseMessage = 'Sale created successfully';
     
-    // If this is NOT an udhar sale, check if customer has outstanding credit and apply payment
-    if (payment_method !== 'udhar' && status === 'completed') {
+    // If this is NOT an udhar sale AND payment is completed, check if customer has outstanding credit and apply payment
+    if (payment_method !== 'udhar' && createdSale.status === 'completed') {
       const pending = await pool.query(
         `SELECT id, amount FROM sales 
          WHERE customer_id = $1 AND payment_method = 'udhar' AND status = 'pending'

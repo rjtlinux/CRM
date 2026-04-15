@@ -15,8 +15,8 @@ const Sales = () => {
     sale_date: new Date().toISOString().split('T')[0],
     amount: '',
     description: '',
-    status: 'pending',
-    payment_method: 'credit_card',
+    status: 'completed',
+    payment_method: 'cash',
     invoice_number: '',
   });
 
@@ -88,8 +88,8 @@ const Sales = () => {
         sale_date: new Date().toISOString().split('T')[0],
         amount: '',
         description: '',
-        status: 'pending',
-        payment_method: 'credit_card',
+        status: 'completed',
+        payment_method: 'cash',
         invoice_number: '',
       });
     }
@@ -102,10 +102,21 @@ const Sales = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // Automatically set status based on payment method
+    if (name === 'payment_method') {
+      setFormData({
+        ...formData,
+        [name]: value,
+        status: value === 'udhar' ? 'pending' : 'completed',
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.amount), 0);
