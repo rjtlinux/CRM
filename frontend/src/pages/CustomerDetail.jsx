@@ -83,26 +83,28 @@ const CustomerDetail = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+          className="text-gray-500 hover:text-gray-700 text-2xl font-bold flex-shrink-0 mt-1"
         >
           ←
         </button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{customer.company_name}</h1>
-          <p className="text-gray-500 mt-1">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 truncate">{customer.company_name}</h1>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+              customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {customer.status}
+            </span>
+          </div>
+          <p className="text-gray-500 mt-1 text-sm truncate">
             {customer.contact_person}
             {customer.contact_designation && ` · ${customer.contact_designation}`}
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-          }`}>
-            {customer.status}
-          </span>
+        <div className="flex-shrink-0">
           <SmartReminder
             customerId={customer.id}
             customerName={customer.company_name}
@@ -173,9 +175,9 @@ const CustomerDetail = () => {
                 { label: 'Email', value: customer.email },
                 { label: 'Phone', value: customer.phone },
               ].map(({ label, value }) => value ? (
-                <div key={label} className="flex justify-between">
-                  <span className="text-sm text-gray-500">{label}</span>
-                  <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{value}</span>
+                <div key={label} className="flex justify-between gap-2">
+                  <span className="text-sm text-gray-500 flex-shrink-0">{label}</span>
+                  <span className="text-sm font-medium text-gray-900 text-right max-w-[60%] truncate">{value}</span>
                 </div>
               ) : null)}
             </div>
@@ -190,9 +192,9 @@ const CustomerDetail = () => {
                 { label: 'Address', value: [customer.address, customer.city, customer.pincode].filter(Boolean).join(', ') },
                 { label: 'Country', value: customer.country },
               ].map(({ label, value }) => value ? (
-                <div key={label} className="flex justify-between">
-                  <span className="text-sm text-gray-500">{label}</span>
-                  <span className="text-sm font-medium text-gray-900 text-right max-w-[60%]">{value}</span>
+                <div key={label} className="flex justify-between gap-2">
+                  <span className="text-sm text-gray-500 flex-shrink-0">{label}</span>
+                  <span className="text-sm font-medium text-gray-900 text-right max-w-[60%] truncate">{value}</span>
                 </div>
               ) : null)}
             </div>

@@ -93,17 +93,17 @@ const MobileBottomNav = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center justify-center flex-1 h-full min-w-0 transition-colors ${
+                className={`relative flex flex-col items-center justify-center flex-1 h-full min-w-0 transition-colors ${
                   active
                     ? 'text-primary-600'
                     : 'text-gray-500 active:text-primary-600'
                 }`}
-                style={{ minHeight: '44px', minWidth: '44px' }} // Touch target size
+                style={{ minHeight: '44px' }}
               >
                 <div className={`transition-transform ${active ? 'scale-110' : ''}`}>
                   {item.icon}
                 </div>
-                <span className={`text-xs mt-1 font-medium truncate max-w-full px-1 ${
+                <span className={`text-[10px] mt-0.5 font-medium truncate max-w-full px-0.5 ${
                   active ? 'text-primary-600' : 'text-gray-600'
                 }`}>
                   {item.label}

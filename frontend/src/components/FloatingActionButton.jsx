@@ -73,7 +73,7 @@ const FloatingActionButton = () => {
       )}
 
       {/* Action Menu */}
-      <div className={`fixed right-4 bottom-24 z-50 md:hidden transition-all duration-300 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+      <div className={`fixed right-20 bottom-24 z-[55] md:hidden transition-all duration-300 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
         <div className="flex flex-col gap-3">
           {actions.map((action, index) => (
             <button
@@ -96,7 +96,7 @@ const FloatingActionButton = () => {
       {/* Main FAB Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed right-4 bottom-24 z-50 md:hidden ${
+        className={`fixed right-20 bottom-24 z-[55] md:hidden ${
           isOpen ? 'bg-gray-600' : 'bg-primary-600'
         } text-white rounded-full p-4 shadow-2xl transition-all active:scale-95 hover:shadow-xl`}
         style={{ minHeight: '64px', minWidth: '64px' }}

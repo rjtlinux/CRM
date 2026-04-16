@@ -59,7 +59,7 @@ const AIChatbot = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform"
+        className="fixed bottom-24 right-4 z-[60] w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform md:bottom-6 md:right-6"
         title="AI Chat Assistant"
       >
         {isOpen ? '✕' : '💬'}
@@ -72,7 +72,7 @@ const AIChatbot = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden" style={{ height: '480px' }}>
+        <div className="fixed bottom-40 right-2 z-[60] w-[calc(100vw-1rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden md:bottom-24 md:right-6 md:w-96" style={{ height: 'min(480px, calc(100vh - 12rem))' }}>
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 flex-shrink-0">
             <div className="flex items-center gap-3">

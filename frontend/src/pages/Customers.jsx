@@ -171,9 +171,9 @@ const Customers = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">{t('customers')}</h1>
-        <button onClick={() => openModal()} className="btn-primary">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{t('customers')}</h1>
+        <button onClick={() => openModal()} className="btn-primary whitespace-nowrap">
           + {t('add')} {t('customer')}
         </button>
       </div>
@@ -199,72 +199,65 @@ const Customers = () => {
 
           return (<div key={customer.id} className="card hover:shadow-lg transition-shadow">
               {/* Compact View */}
-              <div className="flex items-center justify-between p-4">
-                <div className="flex-1 grid grid-cols-6 gap-4 items-center">
-                  {/* Name & Status */}
-                  <div className="col-span-2">
-                    <h3 className="font-bold text-gray-900">{customer.company_name}</h3>
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs mt-1 ${
-                      customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {customer.status === 'active' ? t('active') : t('inactive')}
-                    </span>
+              <div className="p-4">
+                {/* Top row: Name + Actions */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-gray-900 truncate">{customer.company_name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
+                        customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {customer.status === 'active' ? t('active') : t('inactive')}
+                      </span>
+                      {customer.phone && <span className="text-sm text-gray-500 truncate">{customer.phone}</span>}
+                    </div>
                   </div>
-
-                  {/* Phone */}
-                  <div>
-                    <p className="text-sm text-gray-600">{t('phone')}</p>
-                    <p className="font-medium text-gray-900">{customer.phone || '-'}</p>
-                  </div>
-
-                  {/* Total Deal Amount */}
-                  <div>
-                    <p className="text-sm text-gray-600">{t('totalDealAmount')}</p>
-                    <p className="font-bold text-blue-600">{formatIndianCurrency(totalDealAmount)}</p>
-                  </div>
-
-                  {/* Received */}
-                  <div>
-                    <p className="text-sm text-gray-600">{t('received')}</p>
-                    <p className="font-bold text-green-600">{formatIndianCurrency(totalReceived)}</p>
-                  </div>
-
-                  {/* Outstanding */}
-                  <div>
-                    <p className="text-sm text-gray-600">{t('outstanding')}</p>
-                    <p className={`font-bold ${totalOutstanding > 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                      {formatIndianCurrency(totalOutstanding)}
-                    </p>
+                  <div className="flex gap-1 flex-shrink-0 ml-2">
+                    <button
+                      onClick={() => toggleExpanded(customer.id)}
+                      className="btn-secondary text-xs px-2 py-1"
+                    >
+                      {isExpanded ? '▲' : '▼'}
+                    </button>
+                    <button
+                      onClick={() => openModal(customer)}
+                      className="text-blue-600 hover:text-blue-800 px-1"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleDelete(customer.id)}
+                      className="text-red-600 hover:text-red-800 px-1"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleExpanded(customer.id)}
-                    className="btn-secondary text-sm px-3 py-1"
-                  >
-                    {isExpanded ? '▲ ' + t('hide') : '▼ ' + t('viewDetails')}
-                  </button>
-                  <button
-                    onClick={() => openModal(customer)}
-                    className="text-blue-600 hover:text-blue-800 px-2"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={() => handleDelete(customer.id)}
-                    className="text-red-600 hover:text-red-800 px-2"
-                  >
-                    🗑️
-                  </button>
+                {/* Financial summary - responsive grid */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 truncate">{t('totalDealAmount')}</p>
+                    <p className="font-bold text-blue-600 text-sm sm:text-base truncate">{formatIndianCurrency(totalDealAmount)}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 truncate">{t('received')}</p>
+                    <p className="font-bold text-green-600 text-sm sm:text-base truncate">{formatIndianCurrency(totalReceived)}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500 truncate">{t('outstanding')}</p>
+                    <p className={`font-bold text-sm sm:text-base truncate ${totalOutstanding > 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                      {formatIndianCurrency(totalOutstanding)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Expanded View */}
               {isExpanded && (
                 <div className="border-t border-gray-200 bg-gray-50 p-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div>
                       <p className="text-xs text-gray-600">{t('contactPerson')}</p>
                       <p className="font-medium">{customer.contact_person || '-'}</p>
@@ -319,8 +312,8 @@ const Customers = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-3">
+          <div className="bg-white rounded-lg p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6">
               {editingCustomer ? t('editCustomer') : t('createCustomer')}
             </h2>
@@ -328,14 +321,7 @@ const Customers = () => {
               {/* Company Information */}
               <div className="border-b pb-4 mb-4">
                 <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('companyInformation')}</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('companyName')} *
-                    </label>
-                    <input
-                      type="text"
-                      name="company_name"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       value={formData.company_name}
                       onChange={handleChange}
                       className="input-field"
@@ -361,7 +347,7 @@ const Customers = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t('companySize')} *
@@ -401,7 +387,7 @@ const Customers = () => {
               {/* Contact Information */}
               <div className="border-b pb-4 mb-4">
                 <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('contactInformation')}</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t('contactPerson')} *
@@ -432,7 +418,7 @@ const Customers = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t('email')} *
@@ -482,14 +468,7 @@ const Customers = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('city')} *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                       value={formData.city}
                       onChange={handleChange}
                       className="input-field"
@@ -531,7 +510,7 @@ const Customers = () => {
               {/* Lead Information */}
               <div className="border-b pb-4 mb-4">
                 <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('leadInformation')}</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t('generationMode')} *
@@ -565,7 +544,7 @@ const Customers = () => {
                   </div>
 
                   {/* GST Details */}
-                  <div className="col-span-2 border-t border-gray-200 pt-4 mt-4 mb-2">
+                  <div className="sm:col-span-2 border-t border-gray-200 pt-4 mt-4 mb-2">
                     <h3 className="text-base font-semibold text-gray-900">{t('gstDetails')}</h3>
                   </div>
 
@@ -620,7 +599,7 @@ const Customers = () => {
 
                   {/* Total Deal Amount - Only for new customers */}
                   {!editingCustomer && (
-                    <div className="col-span-2 border-t border-gray-200 pt-4 mt-4">
+                    <div className="sm:col-span-2 border-t border-gray-200 pt-4 mt-4">
                       <h3 className="text-base font-semibold text-gray-900 mb-3">
                         {t('totalDealAmount')} ({t('optional')})
                       </h3>
