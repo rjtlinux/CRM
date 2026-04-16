@@ -322,6 +322,13 @@ const Customers = () => {
               <div className="border-b pb-4 mb-4">
                 <h3 className="text-lg font-semibold text-gray-700 mb-3">{t('companyInformation')}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('companyName')} *
+                    </label>
+                    <input
+                      type="text"
+                      name="company_name"
                       value={formData.company_name}
                       onChange={handleChange}
                       className="input-field"
