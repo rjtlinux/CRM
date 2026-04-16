@@ -476,6 +476,13 @@ const Customers = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('city')} *
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
                       value={formData.city}
                       onChange={handleChange}
                       className="input-field"
