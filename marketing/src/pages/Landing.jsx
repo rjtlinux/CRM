@@ -1,8 +1,13 @@
 import { useState } from 'react';
 
+const WHATSAPP_NUMBER = '917827279181';
+const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hi, I want to know more about Buzeye CRM')}`;
+
 const Landing = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+  const [demoForm, setDemoForm] = useState({ name: '', phone: '', business_type: '', message: '' });
+  const [demoSubmitted, setDemoSubmitted] = useState(false);
 
   const features = [
     {
@@ -62,10 +67,10 @@ const Landing = () => {
   ];
 
   const stats = [
-    { value: '10,000+', label: 'Businesses Trust Us' },
-    { value: '₹500 Cr+', label: 'Transactions Managed' },
-    { value: '99.9%', label: 'Uptime Guarantee' },
-    { value: '24/7', label: 'Customer Support' }
+    { value: '6+', label: 'Powerful Modules' },
+    { value: '₹299', label: 'Starting Price/Month' },
+    { value: 'Hindi', label: 'Voice AI Assistant' },
+    { value: '100%', label: 'GST Compliant' }
   ];
 
   const businessTypes = [
@@ -83,70 +88,71 @@ const Landing = () => {
     }
   ];
 
-  const testimonials = [
+  const whyBuzeye = [
     {
-      name: 'Rajesh Kumar',
-      business: 'Kumar Electronics, Delhi',
-      quote: 'Buzeye ने हमारे व्यापार को बदल दिया। अब हम GST filing आसानी से कर पाते हैं और कस्टमर का उधार भी track हो जाता है।',
-      rating: 5
+      title: 'हिंदी में बोलो, काम हो जाए',
+      description: 'Voice से sale record करो, balance check करो — typing की ज़रूरत नहीं। Shop floor से हाथ-free काम करो।',
+      icon: '🗣️'
     },
     {
-      name: 'Priya Sharma',
-      business: 'Sharma Textiles, Surat',
-      quote: 'Best CRM for Indian businesses. The Hindi support and Udhar Khata feature is exactly what we needed. Highly recommended!',
-      rating: 5
+      title: 'Udhar Khata + CRM = Buzeye',
+      description: 'सिर्फ ledger नहीं — complete customer management। Sales pipeline, proposals, follow-ups — सब एक जगह।',
+      icon: '📒'
     },
     {
-      name: 'Amit Patel',
-      business: 'Patel Trading Co., Mumbai',
-      quote: 'Voice-enabled AI assistant is a game changer. I can update sales while working without touching my phone. Amazing!',
-      rating: 5
+      title: 'WhatsApp से Customer Engage करो',
+      description: 'Invoice, payment reminder, updates — सब WhatsApp पर directly भेजो। AI auto-reply भी available।',
+      icon: '💬'
     }
   ];
 
   const pricing = [
     {
       name: 'Starter',
-      price: '₹999',
+      price: '₹299',
       period: '/month',
+      annual: '₹2,999/year',
       features: [
-        'Up to 500 customers',
-        '2 user accounts',
-        'Basic analytics',
+        'Up to 50 customers',
+        '1 user account',
+        'Dashboard & analytics',
         'GST invoicing',
+        'Udhar Khata (Credit Book)',
         'Email support'
       ],
-      cta: 'Get Started',
+      cta: 'Start Free Trial',
       popular: false
     },
     {
       name: 'Professional',
-      price: '₹2,499',
+      price: '₹799',
       period: '/month',
+      annual: '₹7,999/year',
       features: [
-        'Unlimited customers',
+        'Up to 500 customers',
         '5 user accounts',
-        'Advanced analytics with AI',
+        'AI Assistant (Hindi Voice)',
         'WhatsApp integration',
-        'Priority support',
-        'Custom reports'
+        'Sales pipeline & proposals',
+        'Priority WhatsApp support'
       ],
-      cta: 'Most Popular',
+      cta: 'Start Free Trial',
       popular: true
     },
     {
       name: 'Enterprise',
-      price: 'Custom',
-      period: '',
+      price: '₹1,999',
+      period: '/month',
+      annual: 'Custom',
       features: [
-        'Unlimited everything',
+        'Unlimited customers & users',
         'Dedicated account manager',
         'Custom integrations',
-        'On-premise deployment',
-        '24/7 phone support',
+        'Custom branding',
+        'Priority phone support',
         'Training & onboarding'
       ],
-      cta: 'Contact Sales',
+      cta: 'Contact Us',
       popular: false
     }
   ];
@@ -154,7 +160,7 @@ const Landing = () => {
   const faqs = [
     {
       q: 'Is Buzeye suitable for small businesses?',
-      a: 'Absolutely! Buzeye is specifically designed for Indian SMBs. Our starter plan begins at just ₹999/month and includes all essential features like GST compliance, Udhar Khata, and customer management.'
+      a: 'Absolutely! Buzeye is specifically designed for Indian SMBs. Our starter plan begins at just ₹299/month and includes all essential features like GST compliance, Udhar Khata, and customer management.'
     },
     {
       q: 'Do you support Hindi language?',
@@ -174,7 +180,7 @@ const Landing = () => {
     },
     {
       q: 'Is there a free trial?',
-      a: 'Yes! We offer a 14-day free trial with full access to all features. No credit card required. Contact us at contact@buzeye.com to get started.'
+      a: 'Yes! We offer a 14-day free trial with full access to all features. No credit card required. Message us on WhatsApp at +91 78272 79181 to get started.'
     }
   ];
 
@@ -196,8 +202,8 @@ const Landing = () => {
               <a href="#pricing" className="text-slate-600 hover:text-primary-600 transition font-medium">Pricing</a>
               <a href="#testimonials" className="text-slate-600 hover:text-primary-600 transition font-medium">Testimonials</a>
               <a href="#faq" className="text-slate-600 hover:text-primary-600 transition font-medium">FAQ</a>
-              <a href="#contact" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold hover:shadow-lg hover:shadow-primary-500/30 transition">
-                Contact Us
+              <a href="#demo" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold hover:shadow-lg hover:shadow-primary-500/30 transition">
+                Free Demo
               </a>
             </nav>
 
@@ -224,8 +230,8 @@ const Landing = () => {
                 <a href="#pricing" className="text-slate-600 hover:text-primary-600 transition font-medium" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
                 <a href="#testimonials" className="text-slate-600 hover:text-primary-600 transition font-medium" onClick={() => setMobileMenuOpen(false)}>Testimonials</a>
                 <a href="#faq" className="text-slate-600 hover:text-primary-600 transition font-medium" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
-                <a href="#contact" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold text-center" onClick={() => setMobileMenuOpen(false)}>
-                  Contact Us
+                <a href="#demo" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold text-center" onClick={() => setMobileMenuOpen(false)}>
+                  Free Demo
                 </a>
               </nav>
             </div>
@@ -247,7 +253,7 @@ const Landing = () => {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 shadow-sm border border-primary-100 mb-8 text-sm font-medium text-primary-700 animate-fade-in">
               <span className="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
-              <span>AI-Powered CRM · Trusted by 10,000+ Indian Businesses</span>
+              <span>AI-Powered CRM · Made in India, for Indian Businesses</span>
             </div>
 
             {/* Main Headline */}
@@ -266,16 +272,19 @@ const Landing = () => {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16 animate-slide-up" style={{ animationDelay: '0.2s' }}>
               <a
-                href="#contact"
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-accent-500 to-accent-600 text-slate-900 font-semibold text-lg hover:shadow-lg hover:shadow-accent-500/30 transition transform hover:scale-105"
+                href={WHATSAPP_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-lg hover:shadow-lg hover:shadow-green-500/30 transition transform hover:scale-105 flex items-center justify-center gap-3"
               >
-                Start Free Trial
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp पर बात करें
               </a>
               <a
-                href="#features"
-                className="px-8 py-4 rounded-xl border-2 border-primary-500 text-primary-600 font-semibold text-lg hover:bg-primary-50 transition"
+                href="#demo"
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-accent-500 to-accent-600 text-slate-900 font-semibold text-lg hover:shadow-lg hover:shadow-accent-500/30 transition transform hover:scale-105"
               >
-                Explore Features
+                Free Demo बुक करें
               </a>
             </div>
 
@@ -359,35 +368,42 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Why Buzeye Section */}
       <section id="testimonials" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
-              Loved by Indian Businesses
+              Buzeye क्यों चुनें?
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              See what our customers have to say about transforming their business with Buzeye.
+              Indian business के लिए बनाया गया — simple, powerful, and affordable.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="p-8 rounded-2xl bg-white border border-slate-200 shadow-lg">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <svg key={i} className="w-5 h-5 text-accent-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-slate-700 mb-6 leading-relaxed italic">&ldquo;{testimonial.quote}&rdquo;</p>
-                <div>
-                  <div className="font-semibold text-slate-900">{testimonial.name}</div>
-                  <div className="text-sm text-slate-500">{testimonial.business}</div>
-                </div>
+            {whyBuzeye.map((item, index) => (
+              <div key={index} className="p-8 rounded-2xl bg-white border border-slate-200 shadow-lg text-center">
+                <div className="text-5xl mb-6">{item.icon}</div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">{item.title}</h3>
+                <p className="text-slate-600 leading-relaxed">{item.description}</p>
               </div>
             ))}
+          </div>
+
+          {/* Comparison strip */}
+          <div className="mt-16 grid md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-xl bg-primary-50 border border-primary-200 text-center">
+              <p className="text-sm text-primary-600 font-semibold mb-1">vs Khatabook / OkCredit</p>
+              <p className="text-slate-700 text-sm">सिर्फ ledger नहीं — full CRM with sales, proposals, AI</p>
+            </div>
+            <div className="p-6 rounded-xl bg-primary-50 border border-primary-200 text-center">
+              <p className="text-sm text-primary-600 font-semibold mb-1">vs Zoho / Salesforce</p>
+              <p className="text-slate-700 text-sm">Hindi voice support, simple UI, 10x cheaper</p>
+            </div>
+            <div className="p-6 rounded-xl bg-primary-50 border border-primary-200 text-center">
+              <p className="text-sm text-primary-600 font-semibold mb-1">vs Tally</p>
+              <p className="text-slate-700 text-sm">CRM + follow-ups + WhatsApp — not just accounting</p>
+            </div>
           </div>
         </div>
       </section>
@@ -416,10 +432,13 @@ const Landing = () => {
                   </div>
                 )}
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
-                <div className="mb-6">
+                <div className="mb-2">
                   <span className="text-5xl font-bold text-slate-900">{plan.price}</span>
                   <span className="text-slate-600">{plan.period}</span>
                 </div>
+                {plan.annual && (
+                  <p className="text-sm text-primary-600 font-medium mb-6">{plan.annual} (annual)</p>
+                )}
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-3">
@@ -431,7 +450,9 @@ const Landing = () => {
                   ))}
                 </ul>
                 <a
-                  href="#contact"
+                  href={WHATSAPP_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`block w-full py-3 px-6 rounded-xl font-semibold text-center transition ${
                     plan.popular 
                       ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg hover:shadow-primary-500/30' 
@@ -486,41 +507,139 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section id="contact" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white relative overflow-hidden">
+      {/* Demo Request Section */}
+      <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/20 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl" />
         
-        <div className="max-w-4xl mx-auto text-center relative">
-          <h2 className="text-4xl sm:text-5xl font-bold mb-6">
-            Ready to Transform Your Business?
-          </h2>
-          <p className="text-xl text-primary-100 mb-12 max-w-2xl mx-auto">
-            Join 10,000+ Indian businesses already using Buzeye CRM. Start your free 14-day trial today.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
-            <a
-              href="mailto:contact@buzeye.com"
-              className="px-8 py-4 rounded-xl bg-accent-500 text-slate-900 font-semibold text-lg hover:bg-accent-400 transition shadow-lg hover:shadow-accent-500/50"
-            >
-              Contact Sales
-            </a>
-          </div>
-
-          <div className="flex justify-center max-w-2xl mx-auto">
-            <div className="flex items-center gap-4 p-6 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-primary-200">Email Us</div>
-                <a href="mailto:contact@buzeye.com" className="font-semibold hover:text-accent-300 transition">
-                  contact@buzeye.com
+        <div className="max-w-5xl mx-auto relative">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left - Text */}
+            <div>
+              <h2 className="text-4xl sm:text-5xl font-bold mb-6">
+                अपने Business को Digital बनाएं
+              </h2>
+              <p className="text-xl text-primary-100 mb-8 leading-relaxed">
+                14 दिन का free trial — कोई credit card नहीं चाहिए। WhatsApp पर message करें या form भरें, हम आपको setup कर देंगे।
+              </p>
+              
+              <div className="space-y-4">
+                <a
+                  href={WHATSAPP_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-4 p-4 rounded-xl bg-green-500/20 border border-green-400/30 hover:bg-green-500/30 transition"
+                >
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm text-green-200">WhatsApp पर message करें</div>
+                    <div className="font-semibold text-lg">+91 78272 79181</div>
+                  </div>
                 </a>
+
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-white/10 border border-white/20">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm text-primary-200">Email करें</div>
+                    <a href="mailto:contact@buzeye.com" className="font-semibold hover:text-accent-300 transition">
+                      contact@buzeye.com
+                    </a>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Right - Demo Form */}
+            <div className="bg-white rounded-2xl p-8 text-slate-900 shadow-2xl">
+              {demoSubmitted ? (
+                <div className="text-center py-8">
+                  <div className="text-5xl mb-4">🎉</div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Thank You!</h3>
+                  <p className="text-slate-600 mb-6">हम जल्दी ही आपसे WhatsApp पर संपर्क करेंगे।</p>
+                  <a
+                    href={WHATSAPP_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 transition"
+                  >
+                    WhatsApp पर Chat करें →
+                  </a>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-2xl font-bold mb-6">Free Demo बुक करें</h3>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const msg = `New Demo Request!\nName: ${demoForm.name}\nPhone: ${demoForm.phone}\nBusiness: ${demoForm.business_type}\nMessage: ${demoForm.message}`;
+                    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+                    setDemoSubmitted(true);
+                  }} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">आपका नाम *</label>
+                      <input
+                        type="text"
+                        required
+                        value={demoForm.name}
+                        onChange={(e) => setDemoForm({...demoForm, name: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition"
+                        placeholder="e.g., Rajesh Kumar"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={demoForm.phone}
+                        onChange={(e) => setDemoForm({...demoForm, phone: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition"
+                        placeholder="+91 98765 43210"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Business Type *</label>
+                      <select
+                        required
+                        value={demoForm.business_type}
+                        onChange={(e) => setDemoForm({...demoForm, business_type: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition"
+                      >
+                        <option value="">Select your business type</option>
+                        <option value="trader">Trader / Distributor</option>
+                        <option value="retailer">Retail / Shop</option>
+                        <option value="manufacturer">Manufacturer</option>
+                        <option value="service">Service Business</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Message (optional)</label>
+                      <textarea
+                        value={demoForm.message}
+                        onChange={(e) => setDemoForm({...demoForm, message: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition"
+                        rows="2"
+                        placeholder="कोई सवाल हो तो लिखें..."
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full py-4 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold text-lg hover:shadow-lg hover:shadow-primary-500/30 transition"
+                    >
+                      Demo Request भेजें →
+                    </button>
+                    <p className="text-xs text-slate-500 text-center">
+                      Submit करने पर WhatsApp पर message जाएगा। कोई spam नहीं।
+                    </p>
+                  </form>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -537,7 +656,7 @@ const Landing = () => {
                 <span className="text-2xl font-bold text-white">Buzeye</span>
               </div>
               <p className="text-slate-400 mb-6 max-w-md">
-                Enterprise CRM built for Indian businesses. Manage customers, sales, GST, and credit book with AI-powered insights.
+                Indian business के लिए सबसे आसान CRM। उधार track करो, GST invoice बनाओ, customer manage करो — सब हिंदी में।
               </p>
             </div>
 
@@ -547,18 +666,18 @@ const Landing = () => {
               <ul className="space-y-3 text-sm">
                 <li><a href="#features" className="hover:text-white transition">CRM Features</a></li>
                 <li><a href="#pricing" className="hover:text-white transition">Pricing</a></li>
-                <li><a href="#testimonials" className="hover:text-white transition">Customer Stories</a></li>
+                <li><a href="#testimonials" className="hover:text-white transition">Why Buzeye</a></li>
               </ul>
             </div>
 
             {/* Company */}
             <div>
-              <h3 className="font-semibold text-white mb-4">Company</h3>
+              <h3 className="font-semibold text-white mb-4">Contact</h3>
               <ul className="space-y-3 text-sm">
-                <li><a href="#contact" className="hover:text-white transition">Contact Us</a></li>
+                <li><a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="hover:text-white transition">WhatsApp: +91 78272 79181</a></li>
+                <li><a href="mailto:contact@buzeye.com" className="hover:text-white transition">contact@buzeye.com</a></li>
+                <li><a href="#demo" className="hover:text-white transition">Request Demo</a></li>
                 <li><a href="#faq" className="hover:text-white transition">FAQ</a></li>
-                <li><a href="mailto:contact@buzeye.com" className="hover:text-white transition">Support</a></li>
-                <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
               </ul>
             </div>
           </div>
@@ -576,6 +695,17 @@ const Landing = () => {
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href={WHATSAPP_LINK}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-green-500 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-green-600 hover:scale-110 transition-all"
+        aria-label="Chat on WhatsApp"
+      >
+        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      </a>
     </div>
   );
 };
